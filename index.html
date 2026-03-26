@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WRAITH">
+<link rel="manifest" href="manifest.json">
+<title>WRAITH — Spirit Voice Receiver</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blood: #8b0000; --ember: #c0392b; --bone: #d4c5a9;
+  --flicker: #ff4444; --cyan: #00e5ff; --green: #00ff88;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:#000; color:var(--bone); font-family:'Share Tech Mono',monospace; min-height:100vh; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px); pointer-events:none; z-index:99; }
+
+.app { max-width:420px; margin:0 auto; padding-bottom:80px; }
+
+/* Header */
+.header { text-align:center; padding:24px 20px 14px; border-bottom:1px solid rgba(139,0,0,0.3); }
+.logo { font-family:'Cinzel',serif; font-size:2.2rem; font-weight:700; letter-spacing:0.4em; text-shadow:0 0 30px rgba(139,0,0,0.8); animation:logoFlicker 8s infinite; }
+@keyframes logoFlicker { 0%,89%,91%,94%,96%,100%{opacity:1} 90%{opacity:0.4} 92%{opacity:0.8} 95%{opacity:0.3} }
+.tagline { font-size:0.55rem; letter-spacing:0.25em; color:rgba(212,197,169,0.4); margin-top:4px; }
+
+/* Status bar */
+.status-bar { display:flex; justify-content:space-between; align-items:center; padding:8px 20px; background:rgba(139,0,0,0.06); border-bottom:1px solid rgba(139,0,0,0.12); font-size:0.55rem; letter-spacing:0.12em; color:rgba(212,197,169,0.45); flex-wrap:wrap; gap:4px; }
+.dot { width:6px; height:6px; border-radius:50%; background:#222; display:inline-block; margin-right:5px; transition:all 0.3s; }
+.dot.on { background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 1.2s infinite; }
+.dot.warn { background:var(--flicker); box-shadow:0 0 8px var(--flicker); animation:blink 0.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* Visualizers */
+.viz-wrap { padding:14px 20px 6px; }
+.viz-label { font-size:0.5rem; letter-spacing:0.18em; color:rgba(212,197,169,0.25); margin-bottom:5px; }
+canvas#waveform { width:100%; height:70px; display:block; border:1px solid rgba(139,0,0,0.18); background:rgba(0,0,0,0.5); border-radius:2px; }
+canvas#spectrum { width:100%; height:42px; display:block; margin-top:5px; border:1px solid rgba(139,0,0,0.12); background:rgba(0,0,0,0.5); border-radius:2px; }
+
+/* EMF */
+.emf-row { display:flex; align-items:center; gap:8px; padding:7px 20px; background:rgba(0,0,0,0.25); border-top:1px solid rgba(139,0,0,0.08); }
+.emf-label { font-size:0.5rem; letter-spacing:0.14em; color:rgba(212,197,169,0.3); }
+.emf-bar-wrap { flex:1; height:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(139,0,0,0.18); border-radius:3px; overflow:hidden; }
+.emf-fill { height:100%; width:5%; background:linear-gradient(90deg,var(--green),var(--cyan)); border-radius:3px; transition:width 0.2s,background 0.3s; }
+.emf-val { font-size:0.58rem; color:var(--green); min-width:30px; text-align:right; }
+
+/* Tabs */
+.tabs { display:flex; margin:10px 20px 0; border:1px solid rgba(139,0,0,0.22); border-radius:2px; overflow:hidden; }
+.tab { flex:1; padding:9px 2px; text-align:center; font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.07em; color:rgba(212,197,169,0.38); background:rgba(0,0,0,0.45); border:none; cursor:pointer; transition:all 0.2s; text-transform:uppercase; border-right:1px solid rgba(139,0,0,0.12); }
+.tab:last-child { border-right:none; }
+.tab.active { background:rgba(139,0,0,0.22); color:var(--bone); text-shadow:0 0 8px rgba(212,197,169,0.4); }
+
+/* Panels */
+.panel { display:none; padding:14px 20px; }
+.panel.active { display:block; }
+
+/* Controls */
+.ctrl-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.ctrl-group { display:flex; flex-direction:column; gap:5px; }
+.ctrl-label { font-size:0.52rem; letter-spacing:0.13em; color:rgba(212,197,169,0.38); text-transform:uppercase; }
+.ctrl-val { font-size:0.65rem; color:var(--bone); text-align:right; }
+input[type=range] { -webkit-appearance:none; width:100%; height:3px; background:rgba(139,0,0,0.28); border-radius:2px; outline:none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--ember); box-shadow:0 0 6px var(--ember); cursor:pointer; }
+
+/* Buttons */
+.btn { width:100%; padding:14px; background:transparent; border:1px solid rgba(139,0,0,0.45); color:var(--bone); font-family:'Share Tech Mono',monospace; font-size:0.7rem; letter-spacing:0.25em; text-transform:uppercase; cursor:pointer; border-radius:2px; margin-bottom:7px; position:relative; overflow:hidden; transition:all 0.2s; }
+.btn::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(139,0,0,0.12),transparent); opacity:0; transition:opacity 0.2s; }
+.btn.active { border-color:var(--ember); color:var(--ember); text-shadow:0 0 10px rgba(192,57,43,0.6); animation:btnPulse 2s infinite; }
+.btn.rec-btn { border-color:rgba(255,50,50,0.35); color:rgba(255,100,100,0.75); font-size:0.62rem; }
+.btn.rec-btn.active { border-color:var(--flicker); color:var(--flicker); }
+@keyframes btnPulse { 0%,100%{box-shadow:0 0 0 0 rgba(139,0,0,0)} 50%{box-shadow:0 0 18px 2px rgba(139,0,0,0.28)} }
+
+.section-label { font-size:0.52rem; letter-spacing:0.18em; color:rgba(212,197,169,0.25); text-transform:uppercase; margin-bottom:7px; }
+.divider { height:1px; background:linear-gradient(90deg,transparent,rgba(139,0,0,0.25),transparent); margin:10px 0; }
+
+/* ── SPIRIT BOX ── */
+.freq-display { text-align:center; padding:18px 10px; background:rgba(0,0,0,0.55); border:1px solid rgba(139,0,0,0.28); border-radius:2px; margin-bottom:12px; position:relative; }
+.freq-num { font-size:2.6rem; color:var(--cyan); text-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,229,255,0.25); letter-spacing:0.04em; }
+.freq-num.scan { animation:freqFlicker 0.12s infinite; }
+@keyframes freqFlicker { 0%{opacity:1} 50%{opacity:0.65} 100%{opacity:1} }
+.freq-band { font-size:0.58rem; letter-spacing:0.18em; color:rgba(0,229,255,0.45); margin-top:4px; }
+
+/* Filter buttons */
+.filter-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:12px; }
+.fbtn { padding:7px 4px; background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.18); color:rgba(212,197,169,0.42); font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.07em; text-align:center; cursor:pointer; transition:all 0.2s; border-radius:2px; text-transform:uppercase; }
+.fbtn.active { background:rgba(139,0,0,0.28); border-color:var(--ember); color:var(--bone); }
+
+/* ── EVP ── */
+.rec-indicator { display:inline-flex; align-items:center; gap:5px; font-size:0.58rem; color:var(--flicker); opacity:0; transition:opacity 0.3s; }
+.rec-indicator.on { opacity:1; }
+.rec-dot { width:5px; height:5px; background:var(--flicker); border-radius:50%; animation:blink 0.8s infinite; }
+.evp-list { background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.13); border-radius:2px; min-height:70px; padding:9px; font-size:0.58rem; color:rgba(212,197,169,0.28); letter-spacing:0.08em; }
+.evp-item { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(139,0,0,0.09); color:rgba(212,197,169,0.65); }
+.evp-item:last-child { border-bottom:none; }
+.play-btn { padding:3px 7px; background:rgba(139,0,0,0.18); border:1px solid rgba(139,0,0,0.28); color:var(--ember); font-family:'Share Tech Mono',monospace; font-size:0.52rem; cursor:pointer; border-radius:1px; }
+
+/* ── REVERSE ── */
+.sweep-viz { height:52px; background:rgba(0,0,0,0.55); border:1px solid rgba(139,0,0,0.18); border-radius:2px; position:relative; overflow:hidden; margin-bottom:12px; }
+.sweep-bar { position:absolute; top:0; bottom:0; width:3px; background:linear-gradient(180deg,transparent,var(--cyan),transparent); box-shadow:0 0 10px var(--cyan); opacity:0; }
+.sweep-bar.on { opacity:1; animation:sweep 2s linear infinite; }
+@keyframes sweep { 0%{left:0%} 100%{left:100%} }
+.mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:12px; }
+.mode-card { padding:10px 8px; background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.18); border-radius:2px; cursor:pointer; transition:all 0.2s; text-align:center; }
+.mode-card.active { background:rgba(139,0,0,0.18); border-color:var(--ember); }
+.mode-card-title { font-size:0.62rem; letter-spacing:0.1em; color:var(--bone); text-transform:uppercase; margin-bottom:3px; }
+.mode-card-desc { font-size:0.52rem; color:rgba(212,197,169,0.38); line-height:1.4; }
+
+/* ── IR CAMERA ── */
+.cam-wrap { position:relative; background:#000; border:1px solid rgba(255,80,0,0.28); border-radius:2px; overflow:hidden; margin-bottom:10px; cursor:pointer; }
+.cam-wrap.fullscreen { position:fixed; inset:0; z-index:200; border-radius:0; border:none; margin:0; }
+.cam-wrap.fullscreen canvas { width:100vw !important; height:100vh !important; }
+canvas#irCanvas { width:100%; height:210px; display:block; }
+.cam-overlay { position:absolute; inset:0; pointer-events:none; }
+.cam-corner { position:absolute; width:14px; height:14px; border-color:rgba(255,100,0,0.55); border-style:solid; }
+.cam-corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}
+.cam-corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
+.cam-corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}
+.cam-corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
+.cam-temp { position:absolute; top:7px; right:8px; font-size:0.62rem; color:rgba(255,150,50,0.85); text-shadow:0 0 7px rgba(255,100,0,0.5); }
+.cam-motion { position:absolute; bottom:7px; left:50%; transform:translateX(-50%); font-size:0.58rem; letter-spacing:0.18em; color:var(--flicker); text-shadow:0 0 9px var(--flicker); opacity:0; white-space:nowrap; }
+.cam-motion.on { opacity:1; animation:blink 0.5s infinite; }
+.cam-expand { position:absolute; bottom:6px; right:7px; font-size:0.48rem; color:rgba(255,150,50,0.35); letter-spacing:0.1em; }
+.cam-close { display:none; position:absolute; top:10px; right:10px; z-index:201; background:rgba(0,0,0,0.6); border:1px solid rgba(255,80,0,0.4); color:rgba(255,150,50,0.9); font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.13em; padding:5px 11px; cursor:pointer; border-radius:2px; }
+.cam-wrap.fullscreen .cam-close { display:block; }
+.cam-wrap.fullscreen .cam-expand { display:none; }
+.rec-badge { position:absolute; top:7px; left:7px; background:rgba(180,0,0,0.82); color:#fff; font-size:0.48rem; letter-spacing:0.14em; padding:3px 7px; border-radius:2px; display:none; align-items:center; gap:5px; }
+.rec-badge.on { display:flex; }
+.rec-badge-dot { width:5px; height:5px; background:#ff4444; border-radius:50%; animation:blink 0.7s infinite; }
+.ir-legend { display:flex; height:9px; border-radius:2px; overflow:hidden; margin-bottom:3px; border:1px solid rgba(255,80,0,0.18); }
+.ir-legend span { flex:1; height:100%; }
+.ir-legend-labels { display:flex; justify-content:space-between; font-size:0.48rem; color:rgba(212,197,169,0.28); letter-spacing:0.07em; margin-bottom:9px; }
+.ir-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+.ir-stat { background:rgba(0,0,0,0.45); border:1px solid rgba(255,80,0,0.12); border-radius:2px; padding:7px 5px; text-align:center; }
+.ir-stat-label { font-size:0.46rem; letter-spacing:0.1em; color:rgba(212,197,169,0.28); text-transform:uppercase; margin-bottom:3px; }
+.ir-stat-val { font-size:0.82rem; color:rgba(255,150,50,0.88); text-shadow:0 0 7px rgba(255,100,0,0.38); }
+.palette-row { display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap; }
+.pbtn { flex:1; min-width:55px; padding:7px 3px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,80,0,0.18); color:rgba(212,197,169,0.45); font-family:'Share Tech Mono',monospace; font-size:0.55rem; letter-spacing:0.07em; text-align:center; cursor:pointer; transition:all 0.2s; border-radius:2px; text-transform:uppercase; }
+.pbtn.active { background:rgba(255,80,0,0.18); border-color:rgba(255,100,0,0.55); color:var(--bone); }
+.sens-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+
+/* ── SLS ── */
+.sls-wrap { position:relative; background:#000208; border:1px solid rgba(100,200,255,0.22); border-radius:2px; overflow:hidden; margin-bottom:10px; cursor:pointer; }
+.sls-wrap.fullscreen { position:fixed; inset:0; z-index:200; border-radius:0; border:none; margin:0; }
+.sls-wrap.fullscreen canvas { width:100vw !important; height:100vh !important; }
+canvas#slsCanvas { width:100%; height:210px; display:block; }
+.sls-hud { position:absolute; inset:0; pointer-events:none; }
+.sls-corner { position:absolute; width:13px; height:13px; border-color:rgba(100,200,255,0.45); border-style:solid; }
+.sls-corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}
+.sls-corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
+.sls-corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}
+.sls-corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
+.sls-title { position:absolute; top:6px; left:50%; transform:translateX(-50%); font-size:0.48rem; letter-spacing:0.18em; color:rgba(100,200,255,0.45); white-space:nowrap; }
+.sls-figcount { position:absolute; bottom:6px; left:7px; font-size:0.52rem; letter-spacing:0.1em; color:rgba(100,200,255,0.65); }
+.sls-alert { position:absolute; bottom:6px; right:7px; font-size:0.52rem; letter-spacing:0.13em; color:#00e5ff; text-shadow:0 0 8px #00e5ff; opacity:0; transition:opacity 0.2s; }
+.sls-alert.on { opacity:1; animation:blink 0.6s infinite; }
+.sls-close { display:none; position:absolute; top:10px; right:10px; z-index:201; background:rgba(0,0,0,0.6); border:1px solid rgba(100,200,255,0.38); color:rgba(100,200,255,0.88); font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.13em; padding:5px 11px; cursor:pointer; border-radius:2px; }
+.sls-wrap.fullscreen .sls-close { display:block; }
+.sls-expand { position:absolute; bottom:6px; right:7px; font-size:0.48rem; color:rgba(100,200,255,0.3); letter-spacing:0.08em; }
+.sls-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:10px; }
+.sls-stat { background:rgba(0,0,0,0.45); border:1px solid rgba(100,200,255,0.1); border-radius:2px; padding:6px 4px; text-align:center; }
+.sls-stat-label { font-size:0.44rem; letter-spacing:0.09em; color:rgba(212,197,169,0.28); text-transform:uppercase; margin-bottom:3px; }
+.sls-stat-val { font-size:0.82rem; color:rgba(100,200,255,0.88); text-shadow:0 0 6px rgba(0,229,255,0.35); }
+.sls-mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.sls-mcard { padding:9px 7px; background:rgba(0,0,0,0.45); border:1px solid rgba(100,200,255,0.1); border-radius:2px; cursor:pointer; transition:all 0.2s; text-align:center; }
+.sls-mcard.active { background:rgba(0,80,120,0.25); border-color:rgba(100,200,255,0.45); }
+.sls-mcard-title { font-size:0.6rem; letter-spacing:0.1em; color:rgba(100,200,255,0.88); text-transform:uppercase; margin-bottom:3px; }
+.sls-mcard-desc { font-size:0.5rem; color:rgba(212,197,169,0.35); line-height:1.3; }
+.sls-figlist { background:rgba(0,0,0,0.45); border:1px solid rgba(100,200,255,0.1); border-radius:2px; padding:8px 9px; min-height:55px; margin-bottom:10px; font-size:0.52rem; color:rgba(212,197,169,0.28); }
+.sls-fig-entry { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(100,200,255,0.07); color:rgba(100,200,255,0.65); }
+.sls-fig-entry:last-child { border-bottom:none; }
+
+/* ── LIBRARY ── */
+.lib-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+.lib-clear { background:transparent; border:1px solid rgba(139,0,0,0.28); color:rgba(212,197,169,0.28); font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.09em; padding:4px 7px; cursor:pointer; border-radius:2px; }
+.lib-filters { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:7px; }
+.lf { padding:4px 7px; background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.18); color:rgba(212,197,169,0.38); font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.08em; cursor:pointer; border-radius:2px; transition:all 0.2s; }
+.lf.active { background:rgba(139,0,0,0.22); border-color:var(--ember); color:var(--bone); }
+.lib-stats-row { display:flex; justify-content:space-between; font-size:0.52rem; color:rgba(212,197,169,0.28); letter-spacing:0.08em; margin-bottom:9px; }
+.lib-list { display:flex; flex-direction:column; gap:7px; max-height:420px; overflow-y:auto; scrollbar-width:none; }
+.lib-list::-webkit-scrollbar { display:none; }
+.lib-empty { text-align:center; padding:28px 18px; font-size:0.58rem; color:rgba(212,197,169,0.18); letter-spacing:0.09em; line-height:2; border:1px dashed rgba(139,0,0,0.14); border-radius:2px; }
+.lib-item { background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.16); border-radius:2px; overflow:hidden; }
+.lib-item-head { display:flex; align-items:center; gap:7px; padding:7px 9px; }
+.lib-badge { font-size:0.46rem; letter-spacing:0.1em; padding:2px 5px; border-radius:1px; text-transform:uppercase; white-space:nowrap; }
+.badge-sb  { background:rgba(0,80,120,0.38); color:#00e5ff; border:1px solid rgba(0,229,255,0.18); }
+.badge-rev { background:rgba(80,0,120,0.38); color:#cc88ff; border:1px solid rgba(200,100,255,0.18); }
+.badge-ir  { background:rgba(120,40,0,0.38); color:#ff9944; border:1px solid rgba(255,100,0,0.18); }
+.badge-sls { background:rgba(0,60,90,0.38); color:#88ddff; border:1px solid rgba(100,200,255,0.18); }
+.badge-evp { background:rgba(70,0,0,0.38); color:#ff6666; border:1px solid rgba(255,50,50,0.18); }
+.lib-item-name { flex:1; font-size:0.58rem; color:var(--bone); letter-spacing:0.05em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lib-item-time { font-size:0.48rem; color:rgba(212,197,169,0.28); white-space:nowrap; }
+.lib-item-body { padding:0 9px 9px; }
+.lib-audio { width:100%; height:26px; margin-bottom:6px; filter:invert(1) hue-rotate(140deg) brightness(0.65); border-radius:2px; }
+.lib-thumb { width:100%; max-height:130px; object-fit:cover; border-radius:2px; margin-bottom:6px; border:1px solid rgba(139,0,0,0.18); display:block; }
+.lib-actions { display:flex; gap:5px; }
+.lbtn { flex:1; padding:5px 3px; background:rgba(0,0,0,0.38); border:1px solid rgba(139,0,0,0.22); color:rgba(212,197,169,0.55); font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.07em; text-align:center; cursor:pointer; border-radius:2px; text-transform:uppercase; }
+.lbtn.dl { color:rgba(0,255,136,0.65); border-color:rgba(0,255,136,0.18); }
+.lbtn.del { color:rgba(255,80,80,0.45); border-color:rgba(255,80,80,0.14); }
+
+/* Activity log */
+.log-wrap { padding:9px 20px 3px; }
+.log-label { font-size:0.48rem; letter-spacing:0.18em; color:rgba(212,197,169,0.18); text-transform:uppercase; margin-bottom:3px; }
+.activity-log { margin:0 20px; background:rgba(0,0,0,0.45); border:1px solid rgba(139,0,0,0.12); border-radius:2px; padding:9px; height:65px; overflow-y:auto; scrollbar-width:none; }
+.activity-log::-webkit-scrollbar { display:none; }
+.log-line { font-size:0.52rem; letter-spacing:0.09em; color:rgba(212,197,169,0.32); padding:1px 0; line-height:1.5; }
+.log-line.ev { color:rgba(192,57,43,0.75); }
+.log-line.det { color:rgba(0,229,255,0.65); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div class="logo">WRAITH</div>
+  <div class="tagline">Spirit Voice Receiver &nbsp;·&nbsp; Frequency Domain</div>
+</div>
+
+<div class="status-bar">
+  <span><span class="dot" id="dMic"></span>MIC</span>
+  <span><span class="dot" id="dSB"></span>S.BOX</span>
+  <span><span class="dot" id="dEVP"></span>EVP</span>
+  <span id="clock">--:--:--</span>
+</div>
+
+<div class="viz-wrap">
+  <div class="viz-label">WAVEFORM / FREQUENCY DOMAIN</div>
+  <canvas id="waveform" width="760" height="140"></canvas>
+  <canvas id="spectrum" width="760" height="84"></canvas>
+</div>
+
+<div class="emf-row">
+  <span class="emf-label">EMF</span>
+  <div class="emf-bar-wrap"><div class="emf-fill" id="emfFill"></div></div>
+  <span class="emf-val" id="emfVal">0.0</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('sb',this)">S.BOX</button>
+  <button class="tab" onclick="switchTab('evp',this)">EVP</button>
+  <button class="tab" onclick="switchTab('rev',this)">REV</button>
+  <button class="tab" onclick="switchTab('lib',this)" style="color:rgba(255,215,0,0.55)">LIB</button>
+</div>
+
+<!-- ══ SPIRIT BOX ══ -->
+<div class="panel active" id="panel-sb">
+  <div class="freq-display">
+    <div class="freq-num" id="freqNum">87.5</div>
+    <div class="freq-band" id="freqBand">FM — READY</div>
+  </div>
+  <div class="ctrl-grid">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Scan Speed</span>
+      <input type="range" id="sbSpeed" min="50" max="1000" value="200" step="50" oninput="document.getElementById('sbSpeedVal').textContent=this.value+'ms'">
+      <span class="ctrl-val" id="sbSpeedVal">200ms</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Volume</span>
+      <input type="range" id="sbVol" min="0" max="100" value="70" oninput="document.getElementById('sbVolVal').textContent=this.value+'%'">
+      <span class="ctrl-val" id="sbVolVal">70%</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Band</span>
+      <input type="range" id="sbBand" min="0" max="1" step="1" value="0" oninput="onBandChange(this.value)">
+      <span class="ctrl-val" id="sbBandVal">FM</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Filter</span>
+      <input type="range" id="sbFilter" min="0" max="3" step="1" value="1" oninput="document.getElementById('sbFilterVal').textContent=['Low-pass','Band-pass','High-pass','All-pass'][+this.value]">
+      <span class="ctrl-val" id="sbFilterVal">Band-pass</span>
+    </div>
+  </div>
+  <button class="btn" id="sbBtn" onclick="toggleSB()">▶ INITIATE SCAN</button>
+  <button class="btn" onclick="doReverseSweep()" style="font-size:0.62rem">↩ SINGLE REVERSE SWEEP</button>
+  <button class="btn rec-btn" id="sbRecBtn" onclick="toggleRec('sb')">⬤ RECORD SESSION</button>
+</div>
+
+<!-- ══ EVP ══ -->
+<div class="panel" id="panel-evp">
+  <div class="section-label">Audio Filter Mode</div>
+  <div class="filter-grid" id="evpFilters">
+    <button class="fbtn active" onclick="setEvpFilter(this,'raw')">Raw</button>
+    <button class="fbtn" onclick="setEvpFilter(this,'bandpass')">Band-Pass</button>
+    <button class="fbtn" onclick="setEvpFilter(this,'lowpass')">Low-Pass</button>
+    <button class="fbtn" onclick="setEvpFilter(this,'highpass')">High-Pass</button>
+    <button class="fbtn" onclick="setEvpFilter(this,'notch')">Notch</button>
+    <button class="fbtn" onclick="setEvpFilter(this,'comp')">Compress</button>
+  </div>
+  <div class="ctrl-grid">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Filter Freq</span>
+      <input type="range" id="evpFreq" min="200" max="4000" value="800" step="100" oninput="document.getElementById('evpFreqVal').textContent=this.value+'Hz'">
+      <span class="ctrl-val" id="evpFreqVal">800Hz</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Gain</span>
+      <input type="range" id="evpGain" min="1" max="20" value="5" oninput="document.getElementById('evpGainVal').textContent=this.value+'x'">
+      <span class="ctrl-val" id="evpGainVal">5x</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+    <button class="btn" id="evpBtn" onclick="toggleEVP()" style="margin:0;flex:1">⬤ RECORD EVP</button>
+    <span class="rec-indicator" id="recInd"><span class="rec-dot"></span>REC</span>
+  </div>
+  <div class="section-label">Recordings</div>
+  <div class="evp-list" id="evpList">No recordings yet...</div>
+</div>
+
+<!-- ══ REVERSE ══ -->
+<div class="panel" id="panel-rev">
+  <div class="sweep-viz"><div class="sweep-bar" id="sweepBar"></div></div>
+  <div class="section-label">Reverse Mode</div>
+  <div class="mode-grid">
+    <div class="mode-card active" id="rm0" onclick="setRevMode(0)"><div class="mode-card-title">Full Reverse</div><div class="mode-card-desc">Reverse entire stream</div></div>
+    <div class="mode-card" id="rm1" onclick="setRevMode(1)"><div class="mode-card-title">Chunk Flip</div><div class="mode-card-desc">Reverse in segments</div></div>
+    <div class="mode-card" id="rm2" onclick="setRevMode(2)"><div class="mode-card-title">Mirror</div><div class="mode-card-desc">Forward + reverse mix</div></div>
+    <div class="mode-card" id="rm3" onclick="setRevMode(3)"><div class="mode-card-title">Spectral Flip</div><div class="mode-card-desc">Invert spectrum</div></div>
+  </div>
+  <div class="ctrl-grid">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Chunk Size</span>
+      <input type="range" id="revChunk" min="100" max="2000" value="500" step="100" oninput="document.getElementById('revChunkVal').textContent=this.value+'ms'">
+      <span class="ctrl-val" id="revChunkVal">500ms</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Mix</span>
+      <input type="range" id="revMix" min="0" max="100" value="100" oninput="document.getElementById('revMixVal').textContent=this.value+'%'">
+      <span class="ctrl-val" id="revMixVal">100%</span>
+    </div>
+  </div>
+  <button class="btn" id="revBtn" onclick="toggleRev()">▶ START REVERSE SWEEP</button>
+  <button class="btn rec-btn" id="revRecBtn" onclick="toggleRec('rev')">⬤ RECORD SESSION</button>
+</div>
+
+<!-- ══ LIBRARY ══ -->
+<div class="panel" id="panel-lib">
+  <div class="lib-header">
+    <div class="section-label" style="margin:0">INVESTIGATION LIBRARY</div>
+    <button class="lib-clear" onclick="clearLib()">✕ CLEAR ALL</button>
+  </div>
+  <div class="lib-filters">
+    <button class="lf active" onclick="filterLib(this,'all')">ALL</button>
+    <button class="lf" onclick="filterLib(this,'sb')">S.BOX</button>
+    <button class="lf" onclick="filterLib(this,'rev')">REVERSE</button>
+    <button class="lf" onclick="filterLib(this,'evp')">EVP</button>
+  </div>
+  <div class="lib-stats-row"><span id="libCount">0 recordings</span><span id="libSize">0 KB</span></div>
+  <div class="lib-list" id="libList"><div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature.</div></div>
+</div>
+
+<div class="log-wrap"><div class="log-label">System Log</div></div>
+<div class="activity-log" id="actLog">
+  <div class="log-line">[ WRAITH v4.0 ] System initialized</div>
+  <div class="log-line">[ SYS ] Tap any feature to begin</div>
+</div>
+
+</div><!-- end .app -->
+
+<script>
+// ══ GLOBALS ══
+let audioCtx=null, micStream=null, micSrc=null, analyser=null;
+let sbRunning=false, sbInterval=null, sbFreq=87.5, sbDir=1, sbScanSpeed=200;
+let evpRunning=false, evpRec=null, evpChunks=[], evpFilter='raw', evpRecordings=[];
+let revRunning=false, revMode=0;
+let libRecordings=[], libFilter='all';
+
+const waveC=document.getElementById('waveform'), waveX=waveC.getContext('2d');
+const specC=document.getElementById('spectrum'), specX=specC.getContext('2d');
+
+// ══ UTILS ══
+function log(msg,type=''){
+  const el=document.getElementById('actLog');
+  const d=document.createElement('div');
+  d.className='log-line'+(type?' '+type:'');
+  d.textContent=msg; el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString(),1000);
+
+// ══ AUDIO INIT ══
+async function initAudio(){
+  if(audioCtx) return;
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    micStream=stream;
+    micSrc=audioCtx.createMediaStreamSource(stream);
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=2048; analyser.smoothingTimeConstant=0.75;
+    micSrc.connect(analyser);
+    document.getElementById('dMic').className='dot on';
+    log('[ MIC ] Microphone connected','det');
+  }catch(e){ log('[ ERR ] Mic denied — simulating','ev'); }
+  startViz(); startEMF();
+}
+document.body.addEventListener('click',initAudio,{once:true});
+
+// ══ VISUALIZATION ══
+function startViz(){
+  const bufLen=analyser?analyser.frequencyBinCount:1024;
+  const waveData=new Uint8Array(bufLen), freqData=new Uint8Array(bufLen);
+  let phase=0;
+  (function draw(){
+    requestAnimationFrame(draw); phase+=0.03;
+    const W=waveC.width,H=waveC.height,SW=specC.width,SH=specC.height;
+    waveX.fillStyle='rgba(0,0,0,0.3)'; waveX.fillRect(0,0,W,H);
+    if(analyser) analyser.getByteTimeDomainData(waveData);
+    else for(let i=0;i<bufLen;i++) waveData[i]=128+Math.sin(i*0.04+phase)*6+(Math.random()-0.5)*4;
+    waveX.strokeStyle=sbRunning?'rgba(0,229,255,0.75)':'rgba(192,57,43,0.65)';
+    waveX.lineWidth=1.5; waveX.shadowBlur=5;
+    waveX.shadowColor=sbRunning?'rgba(0,229,255,0.25)':'rgba(192,57,43,0.25)';
+    waveX.beginPath();
+    const sw=W/bufLen; let x=0;
+    for(let i=0;i<bufLen;i++){const v=waveData[i]/128,y=(v*H)/2;i===0?waveX.moveTo(x,y):waveX.lineTo(x,y);x+=sw;}
+    waveX.stroke(); waveX.shadowBlur=0;
+    specX.fillStyle='rgba(0,0,0,0.3)'; specX.fillRect(0,0,SW,SH);
+    if(analyser) analyser.getByteFrequencyData(freqData);
+    else for(let i=0;i<bufLen;i++) freqData[i]=Math.max(0,Math.exp(-i/300)*80*(0.5+0.5*Math.sin(i*0.1+phase))+Math.random()*12);
+    const bw=SW/64;
+    for(let i=0;i<64;i++){
+      const v=freqData[Math.floor(i*bufLen/64)]/255,bh=v*SH;
+      specX.fillStyle=sbRunning?`hsl(${180+i*2},100%,${25+v*40}%)`:`hsl(${i*3},75%,${18+v*38}%)`;
+      specX.fillRect(i*bw,SH-bh,bw-1,bh);
+    }
+  })();
+}
+
+// ══ EMF ══
+function startEMF(){
+  let v=0;
+  setInterval(()=>{
+    const t=(sbRunning||evpRunning||revRunning||irRunning||slsRunning)?Math.random()*75+(Math.random()>0.88?80:0):Math.random()*12;
+    v+=(t-v)*0.2; const p=Math.min(100,v);
+    document.getElementById('emfFill').style.width=p+'%';
+    document.getElementById('emfFill').style.background=p>70?'linear-gradient(90deg,#ff4444,#ff0000)':p>40?'linear-gradient(90deg,#ffaa00,#ff6600)':'linear-gradient(90deg,#00ff88,#00e5ff)';
+    document.getElementById('emfVal').textContent=v.toFixed(1);
+    document.getElementById('emfVal').style.color=p>70?'var(--flicker)':p>40?'#ffaa00':'var(--green)';
+    if(p>85&&Math.random()>0.7) log('[ EMF ] Anomalous reading — '+v.toFixed(1)+' μT','ev');
+  },400);
+}
+
+// ══ SPIRIT BOX — REAL INTERNET RADIO SWEEP ══
+// Uses actual live radio streams, sweeps through them rapidly
+const RADIO_STREAMS = [
+  // Mix of talk, music, news — variety gives best spirit box effect
+  'https://streams.kqed.org/kqedradio',
+  'https://npr-ice.streamguys1.com/live.mp3',
+  'https://wnyc-fm939-ice.streamguys1.com/wnyc-fm939-public.aac',
+  'https://stream.wbez.org/wbez128.mp3',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/WBBMAM_SC',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/WINS_SC',
+  'https://live.leanstream.co/CFTR-MP3',
+  'https://icecast.walmradio.com:8443/classic',
+  'https://stream.revma.ihrhls.com/zc3469',
+  'https://stream.revma.ihrhls.com/zc7985',
+  'https://14143.live.streamtheworld.com/KKJZ_HD1AAC_SC',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/KQED_FM_SC',
+  'https://live.wostreaming.net/direct/saga-whamfmaac-ibc1',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/WKRN_SC',
+  'https://stream.revma.ihrhls.com/zc289',
+  'https://stream.revma.ihrhls.com/zc5425',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/WNBCAMAAC_SC',
+  'https://stream.revma.ihrhls.com/zc1377',
+  'https://playerservices.streamtheworld.com/api/livestream-redirect/WFAN_SC',
+  'https://stream.revma.ihrhls.com/zc4617',
+];
+
+let sbAudio = null;       // current playing audio element
+let sbStreamIdx = 0;      // current stream index
+let sbSweepTimer = null;  // sweep interval
+let sbLoadTimer = null;   // stream load timeout
+
+function toggleSB(){
+  sbRunning ? _stopSB() : _startSB();
+}
+
+function _startSB(){
+  sbRunning = true;
+  sbScanSpeed = +document.getElementById('sbSpeed').value;
+  document.getElementById('sbBtn').textContent = '■ STOP SCAN';
+  document.getElementById('sbBtn').classList.add('active');
+  document.getElementById('dSB').className = 'dot on';
+  document.getElementById('freqNum').classList.add('scan');
+  document.getElementById('freqBand').textContent = 'LIVE RADIO — SCANNING';
+  log('[ SPIRIT BOX ] Live radio sweep initiated', 'ev');
+
+  // Shuffle streams for randomness
+  for(let i=RADIO_STREAMS.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [RADIO_STREAMS[i],RADIO_STREAMS[j]]=[RADIO_STREAMS[j],RADIO_STREAMS[i]];
+  }
+
+  _loadNextStream();
+}
+
+function _loadNextStream(){
+  if(!sbRunning) return;
+
+  // Kill previous stream
+  if(sbAudio){
+    sbAudio.pause();
+    sbAudio.src='';
+    sbAudio=null;
+  }
+
+  sbStreamIdx = (sbStreamIdx + 1) % RADIO_STREAMS.length;
+  const url = RADIO_STREAMS[sbStreamIdx];
+
+  // Update display
+  sbFreq = 87.5 + (sbStreamIdx / RADIO_STREAMS.length) * 20.5;
+  document.getElementById('freqNum').textContent = sbFreq.toFixed(1);
+
+  // Create audio element for streaming
+  sbAudio = new Audio();
+  sbAudio.crossOrigin = 'anonymous';
+  sbAudio.volume = +document.getElementById('sbVol').value / 100;
+  sbAudio.src = url;
+  sbAudio.play().catch(()=>{});
+
+  // Connect to Web Audio analyser so waveform shows real audio
+  if(audioCtx){
+    try{
+      const src = audioCtx.createMediaElementSource(sbAudio);
+      const filt = audioCtx.createBiquadFilter();
+      const types = ['lowpass','bandpass','highpass','allpass'];
+      filt.type = types[+document.getElementById('sbFilter').value];
+      filt.frequency.value = 800 + (sbStreamIdx / RADIO_STREAMS.length) * 2000;
+      filt.Q.value = 1.5;
+      src.connect(filt);
+      filt.connect(analyser || audioCtx.destination);
+      if(analyser) analyser.connect(audioCtx.destination);
+    }catch(e){
+      // Element already connected — just play
+    }
+  }
+
+  if(Math.random()>0.7) log('[ SB ] Signal @ '+sbFreq.toFixed(1)+' MHz','det');
+
+  // Schedule next station sweep
+  sbSweepTimer = setTimeout(_loadNextStream, sbScanSpeed);
+}
+
+function _stopSB(){
+  sbRunning = false;
+  clearTimeout(sbSweepTimer);
+  clearTimeout(sbLoadTimer);
+  if(sbAudio){ sbAudio.pause(); sbAudio.src=''; sbAudio=null; }
+  document.getElementById('sbBtn').textContent = '▶ INITIATE SCAN';
+  document.getElementById('sbBtn').classList.remove('active');
+  document.getElementById('dSB').className = 'dot';
+  document.getElementById('freqNum').classList.remove('scan');
+  document.getElementById('freqBand').textContent = 'FM — READY';
+  log('[ SPIRIT BOX ] Scan halted');
+}
+
+function onBandChange(v){
+  // Band selector now controls stream category feel
+  const labels=['FM','AM'];
+  document.getElementById('sbBandVal').textContent = labels[v];
+  document.getElementById('freqBand').textContent = labels[v]+' — READY';
+  sbFreq = v==0 ? 87.5 : 540;
+}
+
+// Volume control updates live stream volume
+document.getElementById('sbVol').oninput = function(){
+  document.getElementById('sbVolVal').textContent = this.value+'%';
+  if(sbAudio) sbAudio.volume = this.value/100;
+};
+
+// Speed control restarts sweep at new speed
+document.getElementById('sbSpeed').oninput = function(){
+  document.getElementById('sbSpeedVal').textContent = this.value+'ms';
+  sbScanSpeed = +this.value;
+  if(sbRunning){
+    clearTimeout(sbSweepTimer);
+    sbSweepTimer = setTimeout(_loadNextStream, sbScanSpeed);
+  }
+};
+
+function doReverseSweep(){
+  if(!sbRunning){ log('[ SB ] Start scan first','ev'); return; }
+  log('[ SB ] Reversing sweep direction','ev');
+  // Sweep backwards through streams
+  clearTimeout(sbSweepTimer);
+  sbStreamIdx = (sbStreamIdx - 2 + RADIO_STREAMS.length) % RADIO_STREAMS.length;
+  _loadNextStream();
+}
+
+// ══ EVP ══
+async function toggleEVP(){
+  if(!audioCtx) await initAudio();
+  if(!micStream){log('[ EVP ] No mic','ev');return;}
+  if(!evpRunning){
+    evpRunning=true; evpChunks=[];
+    document.getElementById('evpBtn').textContent='■ STOP RECORDING';
+    document.getElementById('evpBtn').classList.add('active');
+    document.getElementById('dEVP').className='dot warn';
+    document.getElementById('recInd').classList.add('on');
+    log('[ EVP ] Recording — filter: '+evpFilter,'ev');
+    let stream=micStream;
+    if(evpFilter!=='raw'&&audioCtx){
+      try{
+        const dest=audioCtx.createMediaStreamDestination();
+        const s=audioCtx.createMediaStreamSource(micStream);
+        const f=audioCtx.createBiquadFilter();
+        const g=audioCtx.createGain(); g.gain.value=+document.getElementById('evpGain').value;
+        if(evpFilter==='bandpass'){f.type='bandpass';f.frequency.value=+document.getElementById('evpFreq').value;f.Q.value=2;}
+        else if(evpFilter==='lowpass'){f.type='lowpass';f.frequency.value=+document.getElementById('evpFreq').value;}
+        else if(evpFilter==='highpass'){f.type='highpass';f.frequency.value=+document.getElementById('evpFreq').value;}
+        else if(evpFilter==='notch'){f.type='notch';f.frequency.value=60;f.Q.value=30;}
+        else{f.type='bandpass';f.frequency.value=1000;f.Q.value=0.5;}
+        s.connect(f);f.connect(g);g.connect(dest); stream=dest.stream;
+      }catch(e){}
+    }
+    evpRec=new MediaRecorder(stream);
+    evpRec.ondataavailable=e=>evpChunks.push(e.data);
+    evpRec.onstop=saveEVP; evpRec.start();
+  }else{
+    evpRunning=false; if(evpRec&&evpRec.state!=='inactive') evpRec.stop();
+    document.getElementById('evpBtn').textContent='⬤ RECORD EVP';
+    document.getElementById('evpBtn').classList.remove('active');
+    document.getElementById('dEVP').className='dot';
+    document.getElementById('recInd').classList.remove('on');
+    log('[ EVP ] Recording stopped');
+  }
+}
+function saveEVP(){
+  const blob=new Blob(evpChunks,{type:'audio/webm'});
+  const url=URL.createObjectURL(blob);
+  const ts=new Date().toLocaleTimeString();
+  evpRecordings.push({url,ts,blob});
+  renderEVPList(); log('[ EVP ] Saved — '+ts,'det');
+}
+function renderEVPList(){
+  const el=document.getElementById('evpList');
+  if(!evpRecordings.length){el.innerHTML='No recordings yet...';return;}
+  el.innerHTML=evpRecordings.map((r,i)=>`<div class="evp-item"><span>EVP-${String(i+1).padStart(3,'0')} &nbsp; ${r.ts}</span><button class="play-btn" onclick="playEVP(${i})">▶ PLAY</button></div>`).join('');
+}
+function playEVP(i){ new Audio(evpRecordings[i].url).play(); log('[ EVP ] Playing EVP-'+String(i+1).padStart(3,'0'),'det'); }
+function setEvpFilter(btn,mode){
+  document.querySelectorAll('#evpFilters .fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); evpFilter=mode; log('[ EVP ] Filter: '+mode);
+}
+
+// ══ REVERSE ══
+function toggleRev(){
+  if(!audioCtx){initAudio().then(()=>_startRev());return;}
+  revRunning?_stopRev():_startRev();
+}
+function _startRev(){
+  if(!micStream){log('[ REV ] No mic','ev');return;}
+  revRunning=true;
+  document.getElementById('revBtn').textContent='■ STOP REVERSE';
+  document.getElementById('revBtn').classList.add('active');
+  document.getElementById('sweepBar').classList.add('on');
+  log('[ REVERSE ] Mode: '+['Full','Chunk Flip','Mirror','Spectral'][revMode]+' started','ev');
+  const dest=audioCtx.createMediaStreamDestination();
+  audioCtx.createMediaStreamSource(micStream).connect(dest);
+  const chunkMs=+document.getElementById('revChunk').value;
+  let rec=new MediaRecorder(dest.stream), chunks=[];
+  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.onstop=()=>{
+    if(!revRunning) return;
+    const blob=new Blob(chunks,{type:'audio/webm'}); chunks=[];
+    _processRev(blob); rec.start(); setTimeout(()=>{if(rec.state==='recording')rec.stop();},chunkMs);
+  };
+  rec.start(); setTimeout(()=>{if(rec.state==='recording')rec.stop();},chunkMs);
+  window._revRec=rec;
+}
+async function _processRev(blob){
+  try{
+    const ab=await blob.arrayBuffer();
+    const decoded=await audioCtx.decodeAudioData(ab).catch(()=>null);
+    if(!decoded) return;
+    const out=audioCtx.createBuffer(decoded.numberOfChannels,decoded.length,decoded.sampleRate);
+    const mix=+document.getElementById('revMix').value/100;
+    for(let ch=0;ch<decoded.numberOfChannels;ch++){
+      const inD=decoded.getChannelData(ch), outD=out.getChannelData(ch);
+      if(revMode===0||revMode===1) for(let i=0;i<inD.length;i++) outD[i]=inD[inD.length-1-i]*mix+inD[i]*(1-mix);
+      else if(revMode===2) for(let i=0;i<inD.length;i++) outD[i]=(inD[i]+inD[inD.length-1-i])*0.5;
+      else{ const h=Math.floor(inD.length/2); for(let i=0;i<h;i++){outD[i]=inD[h-1-i];outD[h+i]=inD[inD.length-1-i];} }
+    }
+    const src=audioCtx.createBufferSource(); src.buffer=out;
+
+    // ── Feedback suppression chain ──
+    // 1. Notch filter kills common feedback frequencies (2-4kHz squeal)
+    const notch1=audioCtx.createBiquadFilter();
+    notch1.type='notch'; notch1.frequency.value=2500; notch1.Q.value=8;
+    const notch2=audioCtx.createBiquadFilter();
+    notch2.type='notch'; notch2.frequency.value=4000; notch2.Q.value=8;
+    const notch3=audioCtx.createBiquadFilter();
+    notch3.type='notch'; notch3.frequency.value=1200; notch3.Q.value=5;
+    // 2. Low-pass keeps voice range, cuts high-freq feedback
+    const lp=audioCtx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=3500; lp.Q.value=0.5;
+    // 3. Compressor limits sudden loud spikes
+    const comp=audioCtx.createDynamicsCompressor();
+    comp.threshold.value=-24; comp.knee.value=8;
+    comp.ratio.value=12; comp.attack.value=0.002; comp.release.value=0.15;
+    // 4. Output gain
+    const g=audioCtx.createGain(); g.gain.value=0.6;
+
+    src.connect(notch1); notch1.connect(notch2); notch2.connect(notch3);
+    notch3.connect(lp); lp.connect(comp); comp.connect(g);
+    g.connect(audioCtx.destination); src.start();
+    if(Math.random()>0.9) log('[ REV ] Anomalous pattern detected','det');
+  }catch(e){}
+}
+function _stopRev(){
+  revRunning=false;
+  if(window._revRec&&window._revRec.state==='recording'){try{window._revRec.stop();}catch(e){}}
+  document.getElementById('revBtn').textContent='▶ START REVERSE SWEEP';
+  document.getElementById('revBtn').classList.remove('active');
+  document.getElementById('sweepBar').classList.remove('on');
+  log('[ REVERSE ] Halted');
+}
+function setRevMode(i){
+  revMode=i;
+  document.querySelectorAll('[id^="rm"]').forEach((c,j)=>c.classList.toggle('active',j===i));
+  log('[ REV ] Mode: '+['Full','Chunk Flip','Mirror','Spectral'][i]);
+}
+
+// ══ SESSION RECORDING ══
+const recStates={};
+async function toggleRec(type){
+  if(!audioCtx) await initAudio();
+  if(recStates[type]){
+    // Stop
+    const {rec,chunks,startTime}=recStates[type];
+    if(rec&&rec.state!=='inactive') rec.stop();
+    delete recStates[type];
+    document.getElementById(type+'RecBtn').textContent='⬤ RECORD '+(type==='sls'?'SLS ':'')+' SESSION';
+    document.getElementById(type+'RecBtn').classList.remove('active');
+    const badge=document.getElementById(type==='ir'?'irRecBadge':type==='sls'?'slsRecBadge':null);
+    if(badge) badge.classList.remove('on');
+    log('[ REC ] '+type.toUpperCase()+' session saved');
+  } else {
+    // Start
+    if(!micStream&&(type==='sb'||type==='rev')){log('[ REC ] Need mic first','ev');return;}
+    let stream=micStream;
+    // For IR/SLS record canvas as video
+    if(type==='ir'||type==='sls'){
+      const canvas=type==='ir'?irCanvas:slsCanvas;
+      stream=canvas.captureStream(15);
+    }
+    if(!stream){log('[ REC ] No stream available','ev');return;}
+    const chunks=[], rec=new MediaRecorder(stream);
+    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    rec.onstop=()=>{
+      const isAudio=(type==='sb'||type==='rev'||type==='evp');
+      const mime=isAudio?'audio/webm':'video/webm';
+      const blob=new Blob(chunks,{type:mime});
+      const url=URL.createObjectURL(blob);
+      libRecordings.push({type,url,blob,ts:new Date().toLocaleTimeString(),size:blob.size,isAudio});
+      renderLib(); log('[ REC ] '+type.toUpperCase()+' saved to library','det');
+    };
+    rec.start(); recStates[type]={rec,chunks,startTime:Date.now()};
+    document.getElementById(type+'RecBtn').textContent='■ STOP RECORDING';
+    document.getElementById(type+'RecBtn').classList.add('active');
+    const badge=document.getElementById(type==='ir'?'irRecBadge':type==='sls'?'slsRecBadge':null);
+    if(badge) badge.classList.add('on');
+    log('[ REC ] '+type.toUpperCase()+' recording started','ev');
+  }
+}
+
+// ══ LIBRARY ══
+function renderLib(){
+  const filtered=libFilter==='all'?libRecordings:libRecordings.filter(r=>r.type===libFilter);
+  document.getElementById('libCount').textContent=filtered.length+' recording'+(filtered.length!==1?'s':'');
+  const total=filtered.reduce((s,r)=>s+r.size,0);
+  document.getElementById('libSize').textContent=total>1048576?(total/1048576).toFixed(1)+' MB':(total/1024).toFixed(0)+' KB';
+  const el=document.getElementById('libList');
+  if(!filtered.length){el.innerHTML='<div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature.</div>';return;}
+  el.innerHTML=filtered.map((r,i)=>{
+    const idx=libRecordings.indexOf(r);
+    const names={sb:'Spirit Box',rev:'Reverse',ir:'IR Camera',sls:'SLS Sensor',evp:'EVP'};
+    const bodyHTML=r.isAudio?`<audio class="lib-audio" controls src="${r.url}"></audio>`:`<video class="lib-thumb" controls src="${r.url}"></video>`;
+    return`<div class="lib-item">
+      <div class="lib-item-head">
+        <span class="lib-badge badge-${r.type}">${r.type.toUpperCase()}</span>
+        <span class="lib-item-name">${names[r.type]||r.type}</span>
+        <span class="lib-item-time">${r.ts}</span>
+      </div>
+      <div class="lib-item-body">
+        ${bodyHTML}
+        <div class="lib-actions">
+          <button class="lbtn dl" onclick="dlRec(${idx})">⬇ DOWNLOAD</button>
+          <button class="lbtn del" onclick="delRec(${idx})">✕ DELETE</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterLib(btn,type){
+  libFilter=type;
+  document.querySelectorAll('.lf').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderLib();
+}
+function dlRec(i){
+  const r=libRecordings[i]; if(!r) return;
+  const a=document.createElement('a'); a.href=r.url;
+  a.download='WRAITH-'+r.type+'-'+r.ts.replace(/:/g,'-')+'.'+(r.isAudio?'webm':'webm');
+  a.click(); log('[ LIB ] Downloading '+r.type+' recording');
+}
+function delRec(i){
+  libRecordings.splice(i,1); renderLib(); log('[ LIB ] Recording deleted');
+}
+function clearLib(){ libRecordings=[]; renderLib(); log('[ LIB ] Library cleared'); }
+
+// ══ START ══
+startViz(); startEMF();
+
+// Service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
