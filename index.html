@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WRAITH">
+<meta name="description" content="Frequency-based paranormal investigation. Spirit Box, EVP, IR, SLS.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>WRAITH — Spirit Voice Receiver</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blood: #8b0000;
+    --ember: #c0392b;
+    --ash: #1a1a1a;
+    --fog: #2a2a2a;
+    --bone: #d4c5a9;
+    --ghost: rgba(212,197,169,0.07);
+    --flicker: #ff4444;
+    --cyan: #00e5ff;
+    --green: #00ff88;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #000;
+    color: var(--bone);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  /* Scanlines */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .app {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0 0 80px;
+    position: relative;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 28px 20px 16px;
+    border-bottom: 1px solid rgba(139,0,0,0.3);
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ember), transparent);
+    animation: pulse-line 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-line {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    color: var(--bone);
+    text-shadow: 0 0 30px rgba(139,0,0,0.8), 0 0 60px rgba(139,0,0,0.4);
+    animation: logo-flicker 8s infinite;
+  }
+
+  @keyframes logo-flicker {
+    0%, 89%, 91%, 94%, 96%, 100% { opacity: 1; }
+    90% { opacity: 0.4; }
+    92% { opacity: 0.8; }
+    95% { opacity: 0.3; }
+  }
+
+  .tagline {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: rgba(212,197,169,0.4);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(139,0,0,0.08);
+    border-bottom: 1px solid rgba(139,0,0,0.15);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: rgba(212,197,169,0.5);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #333;
+    display: inline-block;
+    margin-right: 6px;
+    transition: all 0.3s;
+  }
+  .status-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 1.2s infinite; }
+  .status-dot.danger { background: var(--flicker); box-shadow: 0 0 8px var(--flicker); animation: blink 0.5s infinite; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Visualizer */
+  .visualizer-wrap {
+    padding: 16px 20px 8px;
+    position: relative;
+  }
+
+  .viz-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: rgba(212,197,169,0.3);
+    margin-bottom: 6px;
+  }
+
+  canvas#waveform {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border: 1px solid rgba(139,0,0,0.2);
+    background: rgba(0,0,0,0.6);
+    border-radius: 2px;
+  }
+
+  canvas#spectrum {
+    width: 100%;
+    height: 50px;
+    display: block;
+    margin-top: 6px;
+    border: 1px solid rgba(139,0,0,0.15);
+    background: rgba(0,0,0,0.6);
+    border-radius: 2px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    margin: 12px 20px 0;
+    border: 1px solid rgba(139,0,0,0.25);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: rgba(212,197,169,0.4);
+    background: rgba(0,0,0,0.5);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    border-right: 1px solid rgba(139,0,0,0.15);
+  }
+
+  .tab:last-child { border-right: none; }
+  .tab.active {
+    background: rgba(139,0,0,0.25);
+    color: var(--bone);
+    text-shadow: 0 0 10px rgba(212,197,169,0.5);
+  }
+
+  /* Panels */
+  .panel { display: none; padding: 16px 20px; }
+  .panel.active { display: block; }
+
+  /* Spirit Box Panel */
+  .sb-freq-display {
+    text-align: center;
+    padding: 20px 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 2px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sb-freq-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(139,0,0,0.1), transparent 70%);
+  }
+
+  .freq-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2.8rem;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,229,255,0.3);
+    letter-spacing: 0.05em;
+    line-height: 1;
+    position: relative;
+  }
+
+  .freq-number.scanning { animation: freq-flicker 0.1s infinite; }
+
+  @keyframes freq-flicker {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+
+  .freq-band {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: rgba(0,229,255,0.5);
+    margin-top: 4px;
+  }
+
+  .sb-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .control-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .ctrl-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: rgba(212,197,169,0.4);
+    text-transform: uppercase;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: rgba(139,0,0,0.3);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ember);
+    box-shadow: 0 0 8px var(--ember);
+    cursor: pointer;
+  }
+
+  .ctrl-value {
+    font-size: 0.7rem;
+    color: var(--bone);
+    text-align: right;
+  }
+
+  /* Big button */
+  .btn-main {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid rgba(139,0,0,0.5);
+    color: var(--bone);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    border-radius: 2px;
+    margin-bottom: 8px;
+  }
+
+  .btn-main::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(139,0,0,0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-main:active::before, .btn-main.running::before { opacity: 1; }
+
+  .btn-main.running {
+    border-color: var(--ember);
+    color: var(--ember);
+    text-shadow: 0 0 10px rgba(192,57,43,0.7);
+    animation: btn-pulse 2s infinite;
+  }
+
+  @keyframes btn-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(139,0,0,0); }
+    50% { box-shadow: 0 0 20px 2px rgba(139,0,0,0.3); }
+  }
+
+  /* EVP Panel */
+  .evp-controls { display: flex; flex-direction: column; gap: 12px; }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .filter-btn {
+    padding: 8px 4px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,0,0,0.2);
+    color: rgba(212,197,169,0.5);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .filter-btn.active {
+    background: rgba(139,0,0,0.3);
+    border-color: var(--ember);
+    color: var(--bone);
+  }
+
+  .evp-recordings {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,0,0,0.15);
+    border-radius: 2px;
+    min-height: 80px;
+    padding: 10px;
+    font-size: 0.6rem;
+    color: rgba(212,197,169,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  .evp-recordings .rec-item {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(139,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(212,197,169,0.7);
+  }
+
+  .evp-recordings .rec-item:last-child { border-bottom: none; }
+
+  .play-btn {
+    padding: 3px 8px;
+    background: rgba(139,0,0,0.2);
+    border: 1px solid rgba(139,0,0,0.3);
+    color: var(--ember);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    cursor: pointer;
+    border-radius: 1px;
+  }
+
+  .rec-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.6rem;
+    color: var(--flicker);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .rec-indicator.active { opacity: 1; }
+  .rec-dot { width: 6px; height: 6px; background: var(--flicker); border-radius: 50%; animation: blink 0.8s infinite; }
+
+  /* Reverse Panel */
+  .rev-controls { display: flex; flex-direction: column; gap: 14px; }
+
+  .sweep-viz {
+    height: 60px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(139,0,0,0.2);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sweep-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, transparent, var(--cyan), transparent);
+    box-shadow: 0 0 10px var(--cyan);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .sweep-bar.active {
+    opacity: 1;
+    animation: sweep 2s linear infinite;
+  }
+
+  @keyframes sweep {
+    0% { left: 0%; }
+    100% { left: 100%; }
+  }
+
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .mode-card {
+    padding: 12px 10px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,0,0,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .mode-card.active {
+    background: rgba(139,0,0,0.2);
+    border-color: var(--ember);
+  }
+
+  .mode-card-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--bone);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .mode-card-desc {
+    font-size: 0.55rem;
+    color: rgba(212,197,169,0.4);
+    line-height: 1.4;
+  }
+
+  /* Activity log */
+  .activity-log {
+    margin: 0 20px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,0,0,0.15);
+    border-radius: 2px;
+    padding: 10px;
+    height: 72px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .activity-log::-webkit-scrollbar { display: none; }
+
+  .log-line {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: rgba(212,197,169,0.35);
+    padding: 1px 0;
+    line-height: 1.6;
+  }
+
+  .log-line.event { color: rgba(192,57,43,0.8); }
+  .log-line.detect { color: rgba(0,229,255,0.7); }
+
+  .log-label {
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    color: rgba(212,197,169,0.2);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  /* EMF meter */
+  .emf-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid rgba(139,0,0,0.1);
+  }
+
+  .emf-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: rgba(212,197,169,0.35);
+    white-space: nowrap;
+  }
+
+  .emf-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,0,0,0.2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .emf-bar-fill {
+    height: 100%;
+    width: 5%;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    border-radius: 3px;
+    transition: width 0.2s, background 0.3s;
+  }
+
+  .emf-val {
+    font-size: 0.6rem;
+    color: var(--green);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  .section-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: rgba(212,197,169,0.25);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,0,0,0.3), transparent);
+    margin: 12px 0;
+  }
+
+  /* IR Panel */
+  .ir-camera-wrap {
+    position: relative;
+    background: #000;
+    border: 1px solid rgba(255,80,0,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  #irCanvas {
+    width: 100%;
+    height: 200px;
+    display: block;
+  }
+
+  .ir-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .ir-overlay-corner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-color: rgba(255,100,0,0.7);
+    border-style: solid;
+  }
+  .ir-overlay-corner.tl { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+  .ir-overlay-corner.tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+  .ir-overlay-corner.bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+  .ir-overlay-corner.br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+
+  .ir-crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px; height: 24px;
+    border: 1px solid rgba(255,100,0,0.5);
+    border-radius: 50%;
+  }
+  .ir-crosshair::before, .ir-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,100,0,0.4);
+  }
+  .ir-crosshair::before { width: 1px; height: 8px; top: -10px; left: 50%; transform: translateX(-50%); }
+  .ir-crosshair::after { width: 8px; height: 1px; left: -10px; top: 50%; transform: translateY(-50%); }
+
+  .ir-temp-display {
+    position: absolute;
+    top: 8px; right: 8px;
+    font-size: 0.65rem;
+    color: rgba(255,150,50,0.9);
+    text-shadow: 0 0 8px rgba(255,100,0,0.5);
+    letter-spacing: 0.1em;
+  }
+
+  .ir-motion-alert {
+    position: absolute;
+    bottom: 8px; left: 50%; transform: translateX(-50%);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--flicker);
+    text-shadow: 0 0 10px var(--flicker);
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .ir-motion-alert.visible { opacity: 1; animation: blink 0.5s infinite; }
+
+  .ir-palette-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .palette-btn {
+    flex: 1;
+    min-width: 60px;
+    padding: 7px 4px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,80,0,0.2);
+    color: rgba(212,197,169,0.5);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .palette-btn.active {
+    background: rgba(255,80,0,0.2);
+    border-color: rgba(255,100,0,0.6);
+    color: var(--bone);
+  }
+
+  .ir-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .ir-stat {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,80,0,0.15);
+    border-radius: 2px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .ir-stat-label {
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    color: rgba(212,197,169,0.3);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .ir-stat-val {
+    font-size: 0.85rem;
+    color: rgba(255,150,50,0.9);
+    text-shadow: 0 0 8px rgba(255,100,0,0.4);
+  }
+
+  .ir-sensitivity-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .ir-legend {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 10px;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+    border: 1px solid rgba(255,80,0,0.2);
+  }
+
+  .ir-legend span {
+    flex: 1;
+    height: 100%;
+  }
+
+  .ir-legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.5rem;
+    color: rgba(212,197,169,0.3);
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  /* SLS Panel */
+  .sls-viewport {
+    position: relative;
+    background: #000;
+    border: 1px solid rgba(100,200,255,0.25);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  #slsCanvas {
+    width: 100%;
+    height: 220px;
+    display: block;
+  }
+
+  #slsVideo { display: none; }
+
+  .sls-hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .sls-corner {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-color: rgba(100,200,255,0.5);
+    border-style: solid;
+  }
+  .sls-corner.tl { top:5px; left:5px; border-width:2px 0 0 2px; }
+  .sls-corner.tr { top:5px; right:5px; border-width:2px 2px 0 0; }
+  .sls-corner.bl { bottom:5px; left:5px; border-width:0 0 2px 2px; }
+  .sls-corner.br { bottom:5px; right:5px; border-width:0 2px 2px 0; }
+
+  .sls-label {
+    position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    color: rgba(100,200,255,0.5);
+    white-space: nowrap;
+  }
+
+  .sls-figure-count {
+    position: absolute;
+    bottom: 6px; left: 8px;
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    color: rgba(100,200,255,0.7);
+  }
+
+  .sls-alert {
+    position: absolute;
+    bottom: 6px; right: 8px;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: #00e5ff;
+    text-shadow: 0 0 8px #00e5ff;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .sls-alert.visible { opacity: 1; animation: blink 0.6s infinite; }
+
+  .sls-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .sls-stat {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(100,200,255,0.12);
+    border-radius: 2px;
+    padding: 7px 4px;
+    text-align: center;
+  }
+
+  .sls-stat-label {
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: rgba(212,197,169,0.3);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .sls-stat-val {
+    font-size: 0.85rem;
+    color: rgba(100,200,255,0.9);
+    text-shadow: 0 0 6px rgba(0,229,255,0.4);
+  }
+
+  .sls-mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .sls-figure-list {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(100,200,255,0.12);
+    border-radius: 2px;
+    padding: 8px 10px;
+    min-height: 60px;
+    margin-bottom: 10px;
+    font-size: 0.55rem;
+    color: rgba(212,197,169,0.3);
+  }
+
+  .sls-figure-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(100,200,255,0.08);
+    color: rgba(100,200,255,0.7);
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateX(-4px); } to { opacity:1; transform: none; } }
+
+  .sls-figure-entry:last-child { border-bottom: none; }
+  .sls-figure-entry .f-age { color: rgba(212,197,169,0.3); }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">WRAITH</div>
+    <div class="tagline">Spirit Voice Receiver &nbsp;·&nbsp; Frequency Domain</div>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="status-dot" id="micDot"></span>MIC</span>
+    <span><span class="status-dot" id="sbDot"></span>SPIRIT BOX</span>
+    <span><span class="status-dot" id="evpDot"></span>EVP REC</span>
+    <span><span class="status-dot" id="irDot"></span>IR CAM</span>
+    <span><span class="status-dot" id="slsDot"></span>SLS</span>
+    <span id="clockDisplay">--:--:--</span>
+  </div>
+
+  <div class="visualizer-wrap">
+    <div class="viz-label">WAVEFORM / FREQUENCY DOMAIN</div>
+    <canvas id="waveform" width="760" height="160"></canvas>
+    <canvas id="spectrum" width="760" height="100"></canvas>
+  </div>
+
+  <!-- EMF -->
+  <div class="emf-row">
+    <span class="emf-label">EMF</span>
+    <div class="emf-bar-wrap"><div class="emf-bar-fill" id="emfFill"></div></div>
+    <span class="emf-val" id="emfVal">0.0</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('sb')">SPIRIT BOX</button>
+    <button class="tab" onclick="switchTab('evp')">EVP REC</button>
+    <button class="tab" onclick="switchTab('rev')">REVERSE</button>
+    <button class="tab" onclick="switchTab('ir')">IR CAM</button>
+    <button class="tab" onclick="switchTab('sls')">SLS</button>
+  </div>
+
+  <!-- Spirit Box Panel -->
+  <div class="panel active" id="panel-sb">
+    <div class="sb-freq-display">
+      <div class="freq-number" id="freqDisplay">87.5</div>
+      <div class="freq-band" id="bandDisplay">FM — SCANNING</div>
+    </div>
+
+    <div class="sb-controls">
+      <div class="control-group">
+        <span class="ctrl-label">Scan Speed</span>
+        <input type="range" id="scanSpeed" min="50" max="1000" value="200" step="50">
+        <span class="ctrl-value" id="scanSpeedVal">200ms</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Volume</span>
+        <input type="range" id="sbVol" min="0" max="100" value="70">
+        <span class="ctrl-value" id="sbVolVal">70%</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Band</span>
+        <input type="range" id="bandSel" min="0" max="1" step="1" value="0">
+        <span class="ctrl-value" id="bandSelVal">FM</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Filter</span>
+        <input type="range" id="sbFilter" min="0" max="3" step="1" value="1">
+        <span class="ctrl-value" id="sbFilterVal">Band-pass</span>
+      </div>
+    </div>
+
+    <button class="btn-main" id="sbBtn" onclick="toggleSpiritBox()">▶ INITIATE SCAN</button>
+    <button class="btn-main" onclick="reverseSweep()" style="font-size:0.65rem">↩ SINGLE REVERSE SWEEP</button>
+  </div>
+
+  <!-- EVP Panel -->
+  <div class="panel" id="panel-evp">
+    <div class="evp-controls">
+      <div>
+        <div class="section-label">Audio Filter Mode</div>
+        <div class="filter-grid">
+          <button class="filter-btn active" onclick="setEvpFilter(this,'raw')">Raw</button>
+          <button class="filter-btn" onclick="setEvpFilter(this,'bandpass')">Band-Pass</button>
+          <button class="filter-btn" onclick="setEvpFilter(this,'lowpass')">Low-Pass</button>
+          <button class="filter-btn" onclick="setEvpFilter(this,'highpass')">High-Pass</button>
+          <button class="filter-btn" onclick="setEvpFilter(this,'notch')">Notch</button>
+          <button class="filter-btn" onclick="setEvpFilter(this,'comp')">Compress</button>
+        </div>
+      </div>
+
+      <div class="sb-controls" style="grid-template-columns:1fr 1fr;gap:10px">
+        <div class="control-group">
+          <span class="ctrl-label">Filter Freq</span>
+          <input type="range" id="filterFreq" min="200" max="4000" value="800" step="100">
+          <span class="ctrl-value" id="filterFreqVal">800 Hz</span>
+        </div>
+        <div class="control-group">
+          <span class="ctrl-label">Gain</span>
+          <input type="range" id="evpGain" min="1" max="20" value="5">
+          <span class="ctrl-value" id="evpGainVal">5x</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-main" id="evpBtn" onclick="toggleEVP()" style="margin:0;flex:1">⬤ RECORD EVP</button>
+        <span class="rec-indicator" id="recIndicator"><span class="rec-dot"></span>REC</span>
+      </div>
+
+      <div>
+        <div class="section-label" style="margin-bottom:6px">Recordings</div>
+        <div class="evp-recordings" id="evpList"><span style="color:rgba(212,197,169,0.2)">No recordings yet...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reverse Panel -->
+  <div class="panel" id="panel-rev">
+    <div class="rev-controls">
+      <div>
+        <div class="section-label">Sweep Visualization</div>
+        <div class="sweep-viz"><div class="sweep-bar" id="sweepBar"></div></div>
+      </div>
+
+      <div>
+        <div class="section-label">Reverse Mode</div>
+        <div class="mode-grid">
+          <div class="mode-card active" id="modeCard0" onclick="selectRevMode(0)">
+            <div class="mode-card-title">Full Reverse</div>
+            <div class="mode-card-desc">Reverse entire incoming audio stream</div>
+          </div>
+          <div class="mode-card" id="modeCard1" onclick="selectRevMode(1)">
+            <div class="mode-card-title">Chunk Flip</div>
+            <div class="mode-card-desc">Reverse in 500ms segments</div>
+          </div>
+          <div class="mode-card" id="modeCard2" onclick="selectRevMode(2)">
+            <div class="mode-card-title">Mirror</div>
+            <div class="mode-card-desc">Play forward + reverse simultaneously</div>
+          </div>
+          <div class="mode-card" id="modeCard3" onclick="selectRevMode(3)">
+            <div class="mode-card-title">Spectral Flip</div>
+            <div class="mode-card-desc">Invert frequency spectrum</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-controls" style="grid-template-columns:1fr 1fr">
+        <div class="control-group">
+          <span class="ctrl-label">Chunk Size</span>
+          <input type="range" id="chunkSize" min="100" max="2000" value="500" step="100">
+          <span class="ctrl-value" id="chunkSizeVal">500ms</span>
+        </div>
+        <div class="control-group">
+          <span class="ctrl-label">Mix</span>
+          <input type="range" id="revMix" min="0" max="100" value="100">
+          <span class="ctrl-value" id="revMixVal">100%</span>
+        </div>
+      </div>
+
+      <button class="btn-main" id="revBtn" onclick="toggleReverse()">▶ START REVERSE SWEEP</button>
+    </div>
+  </div>
+
+  <!-- IR Panel -->
+  <div class="panel" id="panel-ir">
+
+    <div class="ir-camera-wrap">
+      <canvas id="irCanvas" width="760" height="400"></canvas>
+      <video id="irVideo" style="display:none" autoplay playsinline muted></video>
+      <div class="ir-overlay">
+        <div class="ir-overlay-corner tl"></div>
+        <div class="ir-overlay-corner tr"></div>
+        <div class="ir-overlay-corner bl"></div>
+        <div class="ir-overlay-corner br"></div>
+        <div class="ir-crosshair"></div>
+        <div class="ir-temp-display" id="irTempDisplay">--.- °C</div>
+        <div class="ir-motion-alert" id="irMotionAlert">⚠ MOTION DETECTED</div>
+      </div>
+    </div>
+
+    <!-- Color palette legend -->
+    <div class="ir-legend" id="irLegend">
+      <span style="background:#000010"></span><span style="background:#00008b"></span>
+      <span style="background:#0000ff"></span><span style="background:#00ffff"></span>
+      <span style="background:#00ff00"></span><span style="background:#ffff00"></span>
+      <span style="background:#ff8c00"></span><span style="background:#ff0000"></span>
+      <span style="background:#ffffff"></span>
+    </div>
+    <div class="ir-legend-labels"><span>COLD</span><span>AMBIENT</span><span>HOT</span></div>
+
+    <div class="ir-stats-grid">
+      <div class="ir-stat">
+        <div class="ir-stat-label">Min Temp</div>
+        <div class="ir-stat-val" id="irMin">--.-</div>
+      </div>
+      <div class="ir-stat">
+        <div class="ir-stat-label">Max Temp</div>
+        <div class="ir-stat-val" id="irMax">--.-</div>
+      </div>
+      <div class="ir-stat">
+        <div class="ir-stat-label">Motion Δ</div>
+        <div class="ir-stat-val" id="irMotionVal">0.0</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">IR Palette</div>
+      <div class="ir-palette-row">
+        <button class="palette-btn active" id="pal0" onclick="setIRPalette(0)">Inferno</button>
+        <button class="palette-btn" id="pal1" onclick="setIRPalette(1)">Arctic</button>
+        <button class="palette-btn" id="pal2" onclick="setIRPalette(2)">Night Vision</button>
+        <button class="palette-btn" id="pal3" onclick="setIRPalette(3)">Spectral</button>
+      </div>
+    </div>
+
+    <div class="ir-sensitivity-row">
+      <div class="control-group">
+        <span class="ctrl-label">Sensitivity</span>
+        <input type="range" id="irSensitivity" min="1" max="20" value="8">
+        <span class="ctrl-value" id="irSensVal">8</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Motion Threshold</span>
+        <input type="range" id="irMotionThresh" min="1" max="50" value="15">
+        <span class="ctrl-value" id="irMotionThreshVal">15</span>
+      </div>
+    </div>
+
+    <button class="btn-main" id="irBtn" onclick="toggleIR()">▶ ACTIVATE IR SENSOR</button>
+  </div>
+
+  <!-- SLS Panel -->
+  <div class="panel" id="panel-sls">
+
+    <div class="sls-viewport">
+      <canvas id="slsCanvas" width="760" height="440"></canvas>
+      <video id="slsVideo" autoplay playsinline muted></video>
+      <div class="sls-hud">
+        <div class="sls-corner tl"></div>
+        <div class="sls-corner tr"></div>
+        <div class="sls-corner bl"></div>
+        <div class="sls-corner br"></div>
+        <div class="sls-label">SLS STRUCTURED LIGHT SENSOR</div>
+        <div class="sls-figure-count" id="slsFigCount">FIGURES: 0</div>
+        <div class="sls-alert" id="slsAlert">⬟ FIGURE MAPPED</div>
+      </div>
+    </div>
+
+    <div class="sls-stats-grid">
+      <div class="sls-stat"><div class="sls-stat-label">Figures</div><div class="sls-stat-val" id="slsStatFigs">0</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Joints</div><div class="sls-stat-val" id="slsStatJoints">0</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Motion</div><div class="sls-stat-val" id="slsStatMotion">—</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Depth px</div><div class="sls-stat-val" id="slsStatDepth">—</div></div>
+    </div>
+
+    <div>
+      <div class="section-label">Detection Mode</div>
+      <div class="sls-mode-grid">
+        <div class="mode-card active" id="slsMode0" onclick="setSLSMode(0)" style="border-color:rgba(100,200,255,0.2)">
+          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Stick Figure</div>
+          <div class="mode-card-desc">Classic SLS skeleton overlay</div>
+        </div>
+        <div class="mode-card" id="slsMode1" onclick="setSLSMode(1)" style="border-color:rgba(100,200,255,0.1)">
+          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Point Cloud</div>
+          <div class="mode-card-desc">Raw depth point scatter</div>
+        </div>
+        <div class="mode-card" id="slsMode2" onclick="setSLSMode(2)" style="border-color:rgba(100,200,255,0.1)">
+          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Wireframe</div>
+          <div class="mode-card-desc">3D mesh projection</div>
+        </div>
+        <div class="mode-card" id="slsMode3" onclick="setSLSMode(3)" style="border-color:rgba(100,200,255,0.1)">
+          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Hybrid</div>
+          <div class="mode-card-desc">Camera + stick overlay</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-controls" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="control-group">
+        <span class="ctrl-label">Dot Grid Density</span>
+        <input type="range" id="slsDensity" min="4" max="20" value="10">
+        <span class="ctrl-value" id="slsDensityVal">10</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Sensitivity</span>
+        <input type="range" id="slsSens" min="1" max="10" value="5">
+        <span class="ctrl-value" id="slsSensVal">5</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:6px">Figure Log</div>
+      <div class="sls-figure-list" id="slsFigList"><span style="color:rgba(212,197,169,0.2)">No figures detected...</span></div>
+    </div>
+
+    <button class="btn-main" id="slsBtn" onclick="toggleSLS()" style="border-color:rgba(100,200,255,0.4);color:rgba(100,200,255,0.8)">▶ ACTIVATE SLS SENSOR</button>
+  </div>
+
+  <!-- Activity Log -->
+  <div style="padding:10px 20px 4px">
+    <div class="log-label">System Log</div>
+  </div>
+  <div class="activity-log" id="activityLog">
+    <div class="log-line">[ WRAITH v3.1 ] System initialized</div>
+    <div class="log-line">[ SYS ] Awaiting microphone access...</div>
+  </div>
+
+</div>
+
+<script>
+// ─── AUDIO ENGINE ────────────────────────────────────────────────
+let audioCtx = null;
+let micStream = null;
+let micSource = null;
+let analyser = null;
+let gainNode = null;
+let filterNode = null;
+let animFrame = null;
+
+// Spirit Box state
+let sbRunning = false;
+let sbInterval = null;
+let sbFreq = 87.5;
+let sbDirection = 1;
+let sbOscillator = null;
+let sbGain = null;
+let sbScanSpeed = 200;
+
+// EVP state
+let evpRunning = false;
+let evpMediaRec = null;
+let evpChunks = [];
+let evpFilter = 'raw';
+let evpRecordings = [];
+let evpFilterNode = null;
+let evpGainNode = null;
+
+// Reverse state
+let revRunning = false;
+let revMode = 0;
+let revProcessor = null;
+let revBuffer = [];
+let revChunkSize = 500;
+
+// Canvases
+const waveCanvas = document.getElementById('waveform');
+const waveCtx = waveCanvas.getContext('2d');
+const specCanvas = document.getElementById('spectrum');
+const specCtx = specCanvas.getContext('2d');
+
+// ─── INIT ─────────────────────────────────────────────────────────
+async function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    micStream = stream;
+    micSource = audioCtx.createMediaStreamSource(stream);
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.75;
+
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 1;
+
+    micSource.connect(analyser);
+
+    document.getElementById('micDot').className = 'status-dot active';
+    log('[ MIC ] Microphone connected', 'detect');
+    startVisualization();
+    startEMFSimulation();
+  } catch(e) {
+    log('[ ERR ] Mic access denied — using simulated data', 'event');
+    startVisualization();
+    startEMFSimulation();
+  }
+}
+
+// ─── VISUALIZATION ────────────────────────────────────────────────
+function startVisualization() {
+  const bufLen = analyser ? analyser.frequencyBinCount : 1024;
+  const waveData = new Uint8Array(bufLen);
+  const freqData = new Uint8Array(bufLen);
+
+  let simPhase = 0;
+
+  function draw() {
+    animFrame = requestAnimationFrame(draw);
+    simPhase += 0.03;
+
+    const W = waveCanvas.width, H = waveCanvas.height;
+    const SW = specCanvas.width, SH = specCanvas.height;
+
+    // Waveform
+    waveCtx.clearRect(0, 0, W, H);
+    waveCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    waveCtx.fillRect(0, 0, W, H);
+
+    if (analyser) {
+      analyser.getByteTimeDomainData(waveData);
+    } else {
+      for (let i = 0; i < bufLen; i++) {
+        waveData[i] = 128 + Math.sin(i * 0.04 + simPhase) * 8 + (Math.random() - 0.5) * 6;
+      }
+    }
+
+    waveCtx.strokeStyle = sbRunning ? 'rgba(0,229,255,0.8)' : 'rgba(192,57,43,0.7)';
+    waveCtx.lineWidth = 1.5;
+    waveCtx.shadowColor = sbRunning ? 'rgba(0,229,255,0.3)' : 'rgba(192,57,43,0.3)';
+    waveCtx.shadowBlur = 6;
+    waveCtx.beginPath();
+    const sliceW = W / bufLen;
+    let x = 0;
+    for (let i = 0; i < bufLen; i++) {
+      const v = waveData[i] / 128;
+      const y = (v * H) / 2;
+      if (i === 0) waveCtx.moveTo(x, y);
+      else waveCtx.lineTo(x, y);
+      x += sliceW;
+    }
+    waveCtx.stroke();
+    waveCtx.shadowBlur = 0;
+
+    // Spectrum
+    specCtx.clearRect(0, 0, SW, SH);
+    specCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    specCtx.fillRect(0, 0, SW, SH);
+
+    if (analyser) {
+      analyser.getByteFrequencyData(freqData);
+    } else {
+      for (let i = 0; i < bufLen; i++) {
+        const env = Math.exp(-i / 300);
+        freqData[i] = Math.max(0, env * 100 * (0.5 + 0.5 * Math.sin(i * 0.1 + simPhase)) + Math.random() * 15);
+      }
+    }
+
+    const barW = SW / 64;
+    for (let i = 0; i < 64; i++) {
+      const val = freqData[Math.floor(i * bufLen / 64)] / 255;
+      const bh = val * SH;
+      const hue = sbRunning ? `hsl(${180 + i * 2}, 100%, ${30 + val * 40}%)` : `hsl(${i * 3}, 80%, ${20 + val * 40}%)`;
+      specCtx.fillStyle = hue;
+      specCtx.fillRect(i * barW, SH - bh, barW - 1, bh);
+    }
+  }
+  draw();
+}
+
+// ─── EMF SIMULATION ──────────────────────────────────────────────
+function startEMFSimulation() {
+  let emfVal = 0;
+  setInterval(() => {
+    const target = sbRunning || evpRunning || revRunning
+      ? Math.random() * 80 + (Math.random() > 0.85 ? 80 : 0)
+      : Math.random() * 15;
+    emfVal += (target - emfVal) * 0.2;
+    const pct = Math.min(100, emfVal);
+    document.getElementById('emfFill').style.width = pct + '%';
+    document.getElementById('emfFill').style.background =
+      pct > 70 ? 'linear-gradient(90deg,#ff4444,#ff0000)' :
+      pct > 40 ? 'linear-gradient(90deg,#ffaa00,#ff6600)' :
+      'linear-gradient(90deg,var(--green),var(--cyan))';
+    document.getElementById('emfVal').textContent = emfVal.toFixed(1);
+    document.getElementById('emfVal').style.color =
+      pct > 70 ? 'var(--flicker)' : pct > 40 ? '#ffaa00' : 'var(--green)';
+    if (pct > 85 && Math.random() > 0.7) log('[ EMF ] Anomalous reading — ' + emfVal.toFixed(1) + ' μT', 'event');
+  }, 400);
+}
+
+// ─── SPIRIT BOX ──────────────────────────────────────────────────
+function toggleSpiritBox() {
+  if (!audioCtx) initAudio().then(() => _startSB());
+  else if (!sbRunning) _startSB();
+  else _stopSB();
+}
+
+function _startSB() {
+  sbRunning = true;
+  document.getElementById('sbBtn').textContent = '■ STOP SCAN';
+  document.getElementById('sbBtn').classList.add('running');
+  document.getElementById('sbDot').className = 'status-dot active';
+  document.getElementById('freqDisplay').classList.add('scanning');
+  log('[ SPIRIT BOX ] Scan initiated', 'event');
+
+  const speed = parseInt(document.getElementById('scanSpeed').value);
+  sbScanSpeed = speed;
+
+  sbInterval = setInterval(() => {
+    if (!audioCtx) return;
+    // Generate noise burst at each frequency step
+    generateNoiseBurst();
+
+    // Advance frequency
+    const bands = document.getElementById('bandSel').value == 0;
+    sbFreq += sbDirection * (bands ? 0.1 : 10);
+    if (bands) {
+      if (sbFreq >= 108) { sbFreq = 108; sbDirection = -1; }
+      if (sbFreq <= 87.5) { sbFreq = 87.5; sbDirection = 1; }
+    } else {
+      if (sbFreq >= 1710) { sbFreq = 1710; sbDirection = -1; }
+      if (sbFreq <= 540) { sbFreq = 540; sbDirection = 1; }
+    }
+    document.getElementById('freqDisplay').textContent = sbFreq.toFixed(1);
+    if (Math.random() > 0.97) log('[ SB ] Signal fragment detected @ ' + sbFreq.toFixed(1) + ' MHz', 'detect');
+  }, sbScanSpeed);
+}
+
+function _stopSB() {
+  sbRunning = false;
+  clearInterval(sbInterval);
+  if (sbOscillator) { try { sbOscillator.stop(); } catch(e){} sbOscillator = null; }
+  document.getElementById('sbBtn').textContent = '▶ INITIATE SCAN';
+  document.getElementById('sbBtn').classList.remove('running');
+  document.getElementById('sbDot').className = 'status-dot';
+  document.getElementById('freqDisplay').classList.remove('scanning');
+  log('[ SPIRIT BOX ] Scan halted');
+}
+
+function generateNoiseBurst() {
+  if (!audioCtx) return;
+  const bufLen = audioCtx.sampleRate * (sbScanSpeed / 1000) * 0.8;
+  const buffer = audioCtx.createBuffer(1, Math.max(1, Math.floor(bufLen)), audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  const filterType = ['bandpass','lowpass','highpass','allpass'][parseInt(document.getElementById('sbFilter').value)];
+  const centerFreq = 300 + (sbFreq / 108) * 2000;
+
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.3;
+  }
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = filterType;
+  filt.frequency.value = centerFreq;
+  filt.Q.value = 3;
+
+  const vol = audioCtx.createGain();
+  vol.gain.value = (parseInt(document.getElementById('sbVol').value) / 100) * 0.5;
+
+  src.connect(filt);
+  filt.connect(vol);
+  vol.connect(audioCtx.destination);
+  src.start();
+  src.stop(audioCtx.currentTime + sbScanSpeed / 1000);
+}
+
+function reverseSweep() {
+  if (!audioCtx) { initAudio().then(() => _doReverseSweep()); return; }
+  _doReverseSweep();
+}
+
+function _doReverseSweep() {
+  log('[ SB ] Single reverse sweep triggered', 'event');
+  document.getElementById('sweepBar').classList.add('active');
+  let freq = 108;
+  const interval = setInterval(() => {
+    freq -= 0.2;
+    if (freq <= 87.5) {
+      clearInterval(interval);
+      document.getElementById('sweepBar').classList.remove('active');
+      log('[ SB ] Reverse sweep complete');
+      return;
+    }
+    generateNoiseBurst();
+    document.getElementById('freqDisplay').textContent = freq.toFixed(1);
+  }, 80);
+}
+
+// ─── EVP RECORDER ────────────────────────────────────────────────
+async function toggleEVP() {
+  if (!audioCtx) await initAudio();
+  if (!micStream) { log('[ EVP ] No microphone available', 'event'); return; }
+
+  if (!evpRunning) {
+    evpRunning = true;
+    evpChunks = [];
+    document.getElementById('evpBtn').textContent = '■ STOP RECORDING';
+    document.getElementById('evpBtn').classList.add('running');
+    document.getElementById('evpDot').className = 'status-dot danger';
+    document.getElementById('recIndicator').classList.add('active');
+    log('[ EVP ] Recording started — filter: ' + evpFilter, 'event');
+
+    let streamToRecord = micStream;
+
+    // Apply filter chain
+    if (evpFilter !== 'raw' && audioCtx) {
+      try {
+        const dest = audioCtx.createMediaStreamDestination();
+        const src2 = audioCtx.createMediaStreamSource(micStream);
+        const filt2 = audioCtx.createBiquadFilter();
+        const gn = audioCtx.createGain();
+        gn.gain.value = parseInt(document.getElementById('evpGain').value);
+
+        if (evpFilter === 'bandpass') { filt2.type = 'bandpass'; filt2.frequency.value = parseInt(document.getElementById('filterFreq').value); filt2.Q.value = 2; }
+        else if (evpFilter === 'lowpass') { filt2.type = 'lowpass'; filt2.frequency.value = parseInt(document.getElementById('filterFreq').value); }
+        else if (evpFilter === 'highpass') { filt2.type = 'highpass'; filt2.frequency.value = parseInt(document.getElementById('filterFreq').value); }
+        else if (evpFilter === 'notch') { filt2.type = 'notch'; filt2.frequency.value = 60; filt2.Q.value = 30; }
+        else if (evpFilter === 'comp') { filt2.type = 'bandpass'; filt2.frequency.value = 1000; filt2.Q.value = 0.5; }
+
+        src2.connect(filt2);
+        filt2.connect(gn);
+        gn.connect(dest);
+        streamToRecord = dest.stream;
+      } catch(e) { streamToRecord = micStream; }
+    }
+
+    evpMediaRec = new MediaRecorder(streamToRecord);
+    evpMediaRec.ondataavailable = e => evpChunks.push(e.data);
+    evpMediaRec.onstop = saveEVP;
+    evpMediaRec.start();
+  } else {
+    evpRunning = false;
+    if (evpMediaRec && evpMediaRec.state !== 'inactive') evpMediaRec.stop();
+    document.getElementById('evpBtn').textContent = '⬤ RECORD EVP';
+    document.getElementById('evpBtn').classList.remove('running');
+    document.getElementById('evpDot').className = 'status-dot';
+    document.getElementById('recIndicator').classList.remove('active');
+    log('[ EVP ] Recording stopped — processing...');
+  }
+}
+
+function saveEVP() {
+  const blob = new Blob(evpChunks, { type: 'audio/webm' });
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toLocaleTimeString();
+  evpRecordings.push({ url, ts, blob });
+  renderEVPList();
+  log('[ EVP ] Capture saved — ' + ts, 'detect');
+}
+
+function renderEVPList() {
+  const el = document.getElementById('evpList');
+  if (evpRecordings.length === 0) { el.innerHTML = '<span style="color:rgba(212,197,169,0.2)">No recordings yet...</span>'; return; }
+  el.innerHTML = evpRecordings.map((r, i) => `
+    <div class="rec-item">
+      <span>EVP-${String(i+1).padStart(3,'0')} &nbsp; ${r.ts}</span>
+      <button class="play-btn" onclick="playEVP(${i})">▶ PLAY</button>
+    </div>
+  `).join('');
+}
+
+function playEVP(i) {
+  const audio = new Audio(evpRecordings[i].url);
+  audio.play();
+  log('[ EVP ] Playing capture EVP-' + String(i+1).padStart(3,'0'), 'detect');
+}
+
+function setEvpFilter(btn, mode) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  evpFilter = mode;
+  log('[ EVP ] Filter set: ' + mode);
+}
+
+// ─── REVERSE ENGINE ──────────────────────────────────────────────
+let revAudioBuf = [];
+let revPlayInterval = null;
+
+function toggleReverse() {
+  if (!audioCtx) { initAudio().then(() => _startRev()); return; }
+  if (!revRunning) _startRev();
+  else _stopRev();
+}
+
+function _startRev() {
+  if (!micStream) { log('[ REV ] No microphone available', 'event'); return; }
+  revRunning = true;
+  document.getElementById('revBtn').textContent = '■ STOP REVERSE';
+  document.getElementById('revBtn').classList.add('running');
+  document.getElementById('sweepBar').classList.add('active');
+  log('[ REVERSE ] Mode: ' + ['Full Reverse','Chunk Flip','Mirror','Spectral Flip'][revMode] + ' started', 'event');
+
+  const chunkMs = parseInt(document.getElementById('chunkSize').value);
+  const dest = audioCtx.createMediaStreamDestination();
+  const recSrc = audioCtx.createMediaStreamSource(micStream);
+  recSrc.connect(dest);
+
+  let chunkRec = new MediaRecorder(dest.stream);
+  let chunks = [];
+  chunkRec.ondataavailable = e => chunks.push(e.data);
+  chunkRec.onstop = () => {
+    if (!revRunning) return;
+    const blob = new Blob(chunks, { type: 'audio/webm' });
+    chunks = [];
+    processAndPlay(blob);
+    // restart
+    chunkRec.start();
+    setTimeout(() => { if (chunkRec.state === 'recording') chunkRec.stop(); }, chunkMs);
+  };
+  chunkRec.start();
+  setTimeout(() => { if (chunkRec.state === 'recording') chunkRec.stop(); }, chunkMs);
+  window._chunkRec = chunkRec;
+}
+
+async function processAndPlay(blob) {
+  try {
+    const ab = await blob.arrayBuffer();
+    const decoded = await audioCtx.decodeAudioData(ab).catch(() => null);
+    if (!decoded) return;
+
+    const outBuf = audioCtx.createBuffer(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
+
+    for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+      const inData = decoded.getChannelData(ch);
+      const outData = outBuf.getChannelData(ch);
+      const mix = parseInt(document.getElementById('revMix').value) / 100;
+
+      if (revMode === 0 || revMode === 1) {
+        // Full reverse / chunk flip
+        for (let i = 0; i < inData.length; i++) {
+          outData[i] = inData[inData.length - 1 - i] * mix + inData[i] * (1 - mix);
+        }
+      } else if (revMode === 2) {
+        // Mirror: forward + reverse mixed
+        for (let i = 0; i < inData.length; i++) {
+          outData[i] = (inData[i] + inData[inData.length - 1 - i]) * 0.5;
+        }
+      } else if (revMode === 3) {
+        // Spectral flip: simple approximation by reversing in halves
+        const half = Math.floor(inData.length / 2);
+        for (let i = 0; i < half; i++) {
+          outData[i] = inData[half - 1 - i];
+          outData[half + i] = inData[inData.length - 1 - i];
+        }
+      }
+    }
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = outBuf;
+    const vol = audioCtx.createGain();
+    vol.gain.value = 0.7;
+    src.connect(vol);
+    vol.connect(audioCtx.destination);
+    src.start();
+
+    if (Math.random() > 0.9) log('[ REV ] Anomalous pattern in reverse signal', 'detect');
+  } catch(e) {}
+}
+
+function _stopRev() {
+  revRunning = false;
+  if (window._chunkRec && window._chunkRec.state === 'recording') {
+    try { window._chunkRec.stop(); } catch(e) {}
+  }
+  document.getElementById('revBtn').textContent = '▶ START REVERSE SWEEP';
+  document.getElementById('revBtn').classList.remove('running');
+  document.getElementById('sweepBar').classList.remove('active');
+  log('[ REVERSE ] Sweep halted');
+}
+
+function selectRevMode(i) {
+  revMode = i;
+  document.querySelectorAll('[id^="modeCard"]').forEach((c, j) => c.classList.toggle('active', j === i));
+  log('[ REV ] Mode: ' + ['Full Reverse','Chunk Flip','Mirror','Spectral Flip'][i]);
+}
+
+// ─── UI HELPERS ──────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function log(msg, type = '') {
+  const el = document.getElementById('activityLog');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (type ? ' ' + type : '');
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// Range sliders
+document.getElementById('scanSpeed').oninput = function() {
+  document.getElementById('scanSpeedVal').textContent = this.value + 'ms';
+  sbScanSpeed = parseInt(this.value);
+  if (sbRunning) { _stopSB(); _startSB(); }
+};
+document.getElementById('sbVol').oninput = function() { document.getElementById('sbVolVal').textContent = this.value + '%'; };
+document.getElementById('bandSel').oninput = function() {
+  const labels = ['FM', 'AM'];
+  document.getElementById('bandSelVal').textContent = labels[this.value];
+  document.getElementById('bandDisplay').textContent = labels[this.value] + ' — SCANNING';
+  sbFreq = this.value == 0 ? 87.5 : 540;
+};
+document.getElementById('sbFilter').oninput = function() {
+  const labels = ['Low-pass','Band-pass','High-pass','All-pass'];
+  document.getElementById('sbFilterVal').textContent = labels[this.value];
+};
+document.getElementById('filterFreq').oninput = function() { document.getElementById('filterFreqVal').textContent = this.value + ' Hz'; };
+document.getElementById('evpGain').oninput = function() { document.getElementById('evpGainVal').textContent = this.value + 'x'; };
+document.getElementById('chunkSize').oninput = function() { document.getElementById('chunkSizeVal').textContent = this.value + 'ms'; };
+document.getElementById('revMix').oninput = function() { document.getElementById('revMixVal').textContent = this.value + '%'; };
+
+// Clock
+setInterval(() => {
+  document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// Auto-init on first touch/click
+document.body.addEventListener('click', () => {
+  if (!audioCtx) initAudio();
+}, { once: true });
+
+// ─── IR CAMERA ENGINE ────────────────────────────────────────────
+let irRunning = false;
+let irStream = null;
+let irPalette = 0;
+let irPrevFrame = null;
+let irAnimFrame = null;
+let irSensitivity = 8;
+let irMotionThreshold = 15;
+let irSimPhase = 0;
+let irHotspots = [];
+let irMotionTimer = null;
+
+const irCanvas = document.getElementById('irCanvas');
+const irCtx = irCanvas.getContext('2d');
+const irVideo = document.getElementById('irVideo');
+
+// IR Color Palettes: maps 0-255 intensity to RGB
+const IR_PALETTES = {
+  0: (v) => { // Inferno: black→purple→red→orange→yellow→white
+    const stops = [[0,0,0],[80,0,120],[180,0,60],[220,80,0],[255,200,0],[255,255,255]];
+    return interpolatePalette(v, stops);
+  },
+  1: (v) => { // Arctic: black→dark blue→blue→cyan→white
+    const stops = [[0,0,20],[0,20,80],[0,60,160],[0,180,220],[80,220,255],[255,255,255]];
+    return interpolatePalette(v, stops);
+  },
+  2: (v) => { // Night Vision: black→dark green→green→bright green
+    const stops = [[0,0,0],[0,30,0],[0,100,10],[0,200,20],[80,255,80],[200,255,150]];
+    return interpolatePalette(v, stops);
+  },
+  3: (v) => { // Spectral: black→blue→cyan→green→yellow→red→white
+    const stops = [[0,0,40],[0,0,200],[0,200,200],[0,200,0],[200,200,0],[200,0,0],[255,255,255]];
+    return interpolatePalette(v, stops);
+  }
+};
+
+function interpolatePalette(v, stops) {
+  const t = v / 255 * (stops.length - 1);
+  const lo = Math.floor(t), hi = Math.min(lo + 1, stops.length - 1);
+  const f = t - lo;
+  return stops[lo].map((c, i) => Math.round(c + (stops[hi][i] - c) * f));
+}
+
+function setIRPalette(i) {
+  irPalette = i;
+  document.querySelectorAll('.palette-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+  // Update legend
+  updateIRLegend();
+  log('[ IR ] Palette: ' + ['Inferno','Arctic','Night Vision','Spectral'][i]);
+}
+
+function updateIRLegend() {
+  const leg = document.getElementById('irLegend');
+  leg.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const [r,g,b] = IR_PALETTES[irPalette](Math.round(i / 15 * 255));
+    const s = document.createElement('span');
+    s.style.flex = '1';
+    s.style.height = '100%';
+    s.style.background = `rgb(${r},${g},${b})`;
+    leg.appendChild(s);
+  }
+}
+
+async function toggleIR() {
+  if (!irRunning) await _startIR();
+  else _stopIR();
+}
+
+async function _startIR() {
+  irRunning = true;
+  document.getElementById('irBtn').textContent = '■ DEACTIVATE IR SENSOR';
+  document.getElementById('irBtn').classList.add('running');
+  document.getElementById('irDot').className = 'status-dot active';
+  log('[ IR ] Infrared sensor initializing...', 'event');
+
+  try {
+    irStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 320 }, height: { ideal: 240 } }
+    });
+    irVideo.srcObject = irStream;
+    irVideo.play();
+    log('[ IR ] Camera feed acquired — applying thermal overlay', 'detect');
+    irVideo.addEventListener('loadeddata', startIRProcessing, { once: true });
+  } catch(e) {
+    log('[ IR ] Camera unavailable — running thermal simulation', 'event');
+    startIRSimulation();
+  }
+}
+
+function _stopIR() {
+  irRunning = false;
+  if (irStream) { irStream.getTracks().forEach(t => t.stop()); irStream = null; }
+  cancelAnimationFrame(irAnimFrame);
+  document.getElementById('irBtn').textContent = '▶ ACTIVATE IR SENSOR';
+  document.getElementById('irBtn').classList.remove('running');
+  document.getElementById('irDot').className = 'status-dot';
+  irCtx.clearRect(0, 0, irCanvas.width, irCanvas.height);
+  log('[ IR ] Infrared sensor offline');
+}
+
+function startIRProcessing() {
+  const offscreen = document.createElement('canvas');
+  offscreen.width = 80; offscreen.height = 60;
+  const offCtx = offscreen.getContext('2d');
+
+  function processFrame() {
+    if (!irRunning) return;
+    irAnimFrame = requestAnimationFrame(processFrame);
+    irSimPhase += 0.02;
+
+    offCtx.drawImage(irVideo, 0, 0, 80, 60);
+    const frame = offCtx.getImageData(0, 0, 80, 60);
+    applyIROverlay(frame.data, 80, 60);
+  }
+  processFrame();
+}
+
+function startIRSimulation() {
+  // Generate synthetic thermal hotspots
+  irHotspots = [
+    { x: 0.3 + Math.random() * 0.1, y: 0.3 + Math.random() * 0.1, r: 0.12, temp: 0.6 + Math.random() * 0.3, vx: (Math.random()-0.5)*0.002, vy: (Math.random()-0.5)*0.002 },
+    { x: 0.6 + Math.random() * 0.1, y: 0.5 + Math.random() * 0.1, r: 0.08, temp: 0.4 + Math.random() * 0.2, vx: (Math.random()-0.5)*0.003, vy: (Math.random()-0.5)*0.002 },
+    { x: 0.5, y: 0.7, r: 0.15, temp: 0.3, vx: 0.001, vy: -0.001 }
+  ];
+
+  function simFrame() {
+    if (!irRunning) return;
+    irAnimFrame = requestAnimationFrame(simFrame);
+    irSimPhase += 0.015;
+
+    const W = 80, H = 60;
+    const simData = new Uint8ClampedArray(W * H * 4);
+
+    // Move hotspots
+    irHotspots.forEach(h => {
+      h.x += h.vx + Math.sin(irSimPhase * 0.7) * 0.001;
+      h.y += h.vy + Math.cos(irSimPhase * 0.5) * 0.001;
+      h.x = Math.max(0.05, Math.min(0.95, h.x));
+      h.y = Math.max(0.05, Math.min(0.95, h.y));
+      // Flicker temperature
+      h.temp = Math.max(0.1, Math.min(1.0, h.temp + (Math.random() - 0.5) * 0.015));
+    });
+
+    // Randomly spawn a ghost anomaly
+    if (Math.random() > 0.998) {
+      irHotspots.push({
+        x: Math.random(), y: Math.random(), r: 0.05 + Math.random() * 0.15,
+        temp: 0.7 + Math.random() * 0.3, vx: (Math.random()-0.5)*0.005, vy: (Math.random()-0.5)*0.005,
+        ttl: 120
+      });
+      log('[ IR ] Thermal anomaly detected — transient signature', 'detect');
+      showMotionAlert();
+    }
+
+    // Decay TTL hotspots
+    for (let i = irHotspots.length - 1; i >= 0; i--) {
+      if (irHotspots[i].ttl !== undefined) {
+        irHotspots[i].ttl--;
+        irHotspots[i].temp *= 0.99;
+        if (irHotspots[i].ttl <= 0) irHotspots.splice(i, 1);
+      }
+    }
+
+    // Background thermal noise
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const idx = (y * W + x) * 4;
+        let intensity = 0.15 + Math.sin(x * 0.3 + irSimPhase) * 0.04 + Math.cos(y * 0.4 + irSimPhase * 0.7) * 0.03;
+        intensity += (Math.random() - 0.5) * 0.04; // noise
+
+        // Add hotspot contributions
+        irHotspots.forEach(h => {
+          const dx = x / W - h.x, dy = y / H - h.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const contrib = Math.exp(-dist * dist / (h.r * h.r)) * h.temp;
+          intensity += contrib;
+        });
+
+        intensity = Math.max(0, Math.min(1, intensity));
+        const [r, g, b] = IR_PALETTES[irPalette](Math.round(intensity * 255));
+        simData[idx] = r; simData[idx+1] = g; simData[idx+2] = b; simData[idx+3] = 255;
+      }
+    }
+
+    renderIRCanvas(simData, W, H);
+    updateIRStats(simData, W, H);
+  }
+  simFrame();
+}
+
+function applyIROverlay(rawData, W, H) {
+  const outData = new Uint8ClampedArray(W * H * 4);
+  let motionDelta = 0;
+
+  for (let i = 0; i < W * H; i++) {
+    const idx = i * 4;
+    const r = rawData[idx], g = rawData[idx+1], b = rawData[idx+2];
+    // Luminance as "heat" proxy
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    const sens = irSensitivity / 8;
+    const boosted = Math.min(1, Math.pow(lum, 1 / sens));
+
+    if (irPrevFrame) {
+      const pl = (0.299 * irPrevFrame[idx] + 0.587 * irPrevFrame[idx+1] + 0.114 * irPrevFrame[idx+2]) / 255;
+      motionDelta += Math.abs(lum - pl);
+    }
+
+    const [pr, pg, pb] = IR_PALETTES[irPalette](Math.round(boosted * 255));
+    outData[idx] = pr; outData[idx+1] = pg; outData[idx+2] = pb; outData[idx+3] = 255;
+  }
+
+  irPrevFrame = new Uint8ClampedArray(rawData);
+  const avgDelta = (motionDelta / (W * H)) * 1000;
+  document.getElementById('irMotionVal').textContent = avgDelta.toFixed(1);
+
+  if (avgDelta > irMotionThreshold) {
+    showMotionAlert();
+    log('[ IR ] Motion delta: ' + avgDelta.toFixed(1) + ' — presence indicated', 'detect');
+  }
+
+  renderIRCanvas(outData, W, H);
+  updateIRStats(outData, W, H);
+}
+
+function renderIRCanvas(data, W, H) {
+  const cW = irCanvas.width, cH = irCanvas.height;
+  // Create small imagedata and scale up
+  const small = new ImageData(data, W, H);
+  const offscreen2 = document.createElement('canvas');
+  offscreen2.width = W; offscreen2.height = H;
+  offscreen2.getContext('2d').putImageData(small, 0, 0);
+
+  irCtx.clearRect(0, 0, cW, cH);
+  irCtx.imageSmoothingEnabled = true;
+  irCtx.imageSmoothingQuality = 'high';
+  irCtx.drawImage(offscreen2, 0, 0, cW, cH);
+
+  // Vignette
+  const grad = irCtx.createRadialGradient(cW/2, cH/2, cH*0.3, cW/2, cH/2, cH*0.9);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+  irCtx.fillStyle = grad;
+  irCtx.fillRect(0, 0, cW, cH);
+
+  // Scan line
+  const scanY = ((Date.now() / 3000) % 1) * cH;
+  irCtx.strokeStyle = 'rgba(255,100,0,0.15)';
+  irCtx.lineWidth = 2;
+  irCtx.beginPath();
+  irCtx.moveTo(0, scanY);
+  irCtx.lineTo(cW, scanY);
+  irCtx.stroke();
+}
+
+function updateIRStats(data, W, H) {
+  let minV = 255, maxV = 0, sumR = 0;
+  for (let i = 0; i < W * H; i++) {
+    const v = data[i * 4]; // red channel as proxy
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+    sumR += v;
+  }
+  const minTemp = (minV / 255 * 40 + 15).toFixed(1);
+  const maxTemp = (maxV / 255 * 40 + 15).toFixed(1);
+  const centerTemp = (sumR / (W * H) / 255 * 40 + 15).toFixed(1);
+
+  document.getElementById('irMin').textContent = minTemp;
+  document.getElementById('irMax').textContent = maxTemp;
+  document.getElementById('irTempDisplay').textContent = centerTemp + ' °C';
+}
+
+function showMotionAlert() {
+  const el = document.getElementById('irMotionAlert');
+  el.classList.add('visible');
+  clearTimeout(irMotionTimer);
+  irMotionTimer = setTimeout(() => el.classList.remove('visible'), 2000);
+}
+
+document.getElementById('irSensitivity').oninput = function() {
+  irSensitivity = parseInt(this.value);
+  document.getElementById('irSensVal').textContent = this.value;
+};
+document.getElementById('irMotionThresh').oninput = function() {
+  irMotionThreshold = parseInt(this.value);
+  document.getElementById('irMotionThreshVal').textContent = this.value;
+};
+
+// Init legend
+updateIRLegend();
+
+// ─── SLS ENGINE ──────────────────────────────────────────────────
+let slsRunning = false;
+let slsStream = null;
+let slsMode = 0;
+let slsAnimFrame = null;
+let slsPhase = 0;
+let slsFigures = [];       // active simulated figures
+let slsLogEntries = [];
+let slsDensity = 10;
+let slsSensitivity = 5;
+let slsAlertTimer = null;
+let slsPrevDepth = null;
+let slsTotalDetected = 0;
+
+const slsCanvas = document.getElementById('slsCanvas');
+const slsCtx = slsCanvas.getContext('2d');
+const slsVideo = document.getElementById('slsVideo');
+
+// Skeleton joint connections (indices into joints array)
+const SKELETON_CONNECTIONS = [
+  [0,1],[1,2],[2,3],           // head → neck → shoulder_l → elbow_l
+  [1,4],[4,5],                  // neck → shoulder_r → elbow_r
+  [2,6],[4,7],                  // shoulders → hands (simplified)
+  [1,8],[8,9],[9,10],          // neck → hip_c → hip_l → knee_l
+  [8,11],[11,12],               // hip_c → hip_r → knee_r
+  [9,13],[11,14]                // knees → feet
+];
+
+const JOINT_NAMES = ['Head','Neck','Sh.L','El.L','Sh.R','El.R','Hand.L','Hand.R','Hip','Hip.L','Kn.L','Hip.R','Kn.R','Ft.L','Ft.R'];
+
+function createSLSFigure(cx, cy, scale, phase) {
+  // 15 joint positions relative to center, normalized 0-1 canvas space
+  const s = scale;
+  return {
+    cx, cy, scale: s, phase,
+    vx: (Math.random() - 0.5) * 0.001,
+    vy: (Math.random() - 0.5) * 0.0005,
+    joints: [
+      [0, -0.45*s],   // 0 head
+      [0, -0.32*s],   // 1 neck
+      [-0.13*s, -0.22*s], // 2 sh_l
+      [-0.22*s, -0.05*s], // 3 el_l
+      [0.13*s, -0.22*s],  // 4 sh_r
+      [0.22*s, -0.05*s],  // 5 el_r
+      [-0.28*s, 0.06*s],  // 6 hand_l
+      [0.28*s, 0.06*s],   // 7 hand_r
+      [0, 0.05*s],        // 8 hip_c
+      [-0.09*s, 0.22*s],  // 9 hip_l
+      [-0.09*s, 0.42*s],  // 10 knee_l
+      [0.09*s, 0.22*s],   // 11 hip_r
+      [0.09*s, 0.42*s],   // 12 knee_r
+      [-0.1*s, 0.58*s],   // 13 ft_l
+      [0.1*s, 0.58*s],    // 14 ft_r
+    ],
+    ttl: 300 + Math.floor(Math.random() * 400),
+    opacity: 0,
+    id: ++slsTotalDetected,
+    detectedAt: new Date().toLocaleTimeString()
+  };
+}
+
+function setSLSMode(i) {
+  slsMode = i;
+  document.querySelectorAll('[id^="slsMode"]').forEach((c, j) => {
+    c.classList.toggle('active', j === i);
+    c.style.borderColor = j === i ? 'rgba(100,200,255,0.5)' : 'rgba(100,200,255,0.1)';
+  });
+  log('[ SLS ] Mode: ' + ['Stick Figure','Point Cloud','Wireframe','Hybrid'][i]);
+}
+
+async function toggleSLS() {
+  if (!slsRunning) await _startSLS();
+  else _stopSLS();
+}
+
+async function _startSLS() {
+  slsRunning = true;
+  document.getElementById('slsBtn').textContent = '■ DEACTIVATE SLS SENSOR';
+  document.getElementById('slsBtn').classList.add('running');
+  document.getElementById('slsDot').className = 'status-dot active';
+  log('[ SLS ] Structured Light Sensor initializing...', 'event');
+
+  try {
+    slsStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 320 }, height: { ideal: 240 } }
+    });
+    slsVideo.srcObject = slsStream;
+    await slsVideo.play();
+    log('[ SLS ] Camera acquired — projecting structured light grid', 'detect');
+  } catch(e) {
+    log('[ SLS ] Camera unavailable — running SLS simulation', 'event');
+  }
+  _slsLoop();
+}
+
+function _stopSLS() {
+  slsRunning = false;
+  if (slsStream) { slsStream.getTracks().forEach(t => t.stop()); slsStream = null; }
+  cancelAnimationFrame(slsAnimFrame);
+  slsFigures = [];
+  slsCtx.clearRect(0, 0, slsCanvas.width, slsCanvas.height);
+  document.getElementById('slsBtn').textContent = '▶ ACTIVATE SLS SENSOR';
+  document.getElementById('slsBtn').classList.remove('running');
+  document.getElementById('slsDot').className = 'status-dot';
+  document.getElementById('slsFigCount').textContent = 'FIGURES: 0';
+  log('[ SLS ] Sensor offline');
+}
+
+function _slsLoop() {
+  if (!slsRunning) return;
+  slsAnimFrame = requestAnimationFrame(_slsLoop);
+  slsPhase += 0.018;
+
+  const cW = slsCanvas.width, cH = slsCanvas.height;
+  slsCtx.clearRect(0, 0, cW, cH);
+
+  // Dark background
+  slsCtx.fillStyle = 'rgba(0,2,8,0.92)';
+  slsCtx.fillRect(0, 0, cW, cH);
+
+  // If camera available, draw camera feed with dark tint (Hybrid mode)
+  if (slsStream && slsVideo.readyState >= 2 && (slsMode === 3)) {
+    slsCtx.globalAlpha = 0.25;
+    slsCtx.drawImage(slsVideo, 0, 0, cW, cH);
+    slsCtx.globalAlpha = 1;
+  }
+
+  // Draw structured light dot grid
+  _drawDotGrid(cW, cH);
+
+  // Randomly spawn figures
+  if (Math.random() > (1 - slsSensitivity * 0.0008) && slsFigures.length < 3) {
+    const margin = 0.25;
+    const f = createSLSFigure(
+      margin + Math.random() * (1 - margin * 2),
+      0.35 + Math.random() * 0.3,
+      0.28 + Math.random() * 0.15,
+      Math.random() * Math.PI * 2
+    );
+    slsFigures.push(f);
+    addSLSLog(f);
+    showSLSAlert();
+    log('[ SLS ] Figure #' + f.id + ' detected — ' + JOINT_NAMES.length + ' joints mapped', 'detect');
+  }
+
+  // Update & draw figures
+  for (let i = slsFigures.length - 1; i >= 0; i--) {
+    const f = slsFigures[i];
+    f.ttl--;
+    f.cx = Math.max(0.15, Math.min(0.85, f.cx + f.vx + Math.sin(slsPhase * 0.3 + f.phase) * 0.0003));
+    f.cy = Math.max(0.3, Math.min(0.85, f.cy + f.vy));
+    f.opacity = f.ttl > 30 ? Math.min(1, f.opacity + 0.04) : f.opacity * 0.93;
+
+    // Animate joints subtly (breathing / sway)
+    const sway = Math.sin(slsPhase * 0.8 + f.phase) * 0.012 * f.scale;
+    const breathe = Math.sin(slsPhase * 1.2 + f.phase) * 0.005 * f.scale;
+    f.joints[3] = [f.joints[3][0] + Math.sin(slsPhase * 1.5) * 0.002, f.joints[3][1] + Math.cos(slsPhase) * 0.002]; // elbow flicker
+
+    if (slsMode === 0 || slsMode === 3) _drawStickFigure(f, cW, cH, sway, breathe);
+    else if (slsMode === 1) _drawPointCloud(f, cW, cH);
+    else if (slsMode === 2) _drawWireframe(f, cW, cH, sway);
+
+    if (f.ttl <= 0) { slsFigures.splice(i, 1); }
+  }
+
+  // Stats
+  const totalJoints = slsFigures.reduce((s, f) => s + f.joints.length, 0);
+  document.getElementById('slsFigCount').textContent = 'FIGURES: ' + slsFigures.length;
+  document.getElementById('slsStatFigs').textContent = slsFigures.length;
+  document.getElementById('slsStatJoints').textContent = totalJoints;
+  document.getElementById('slsStatMotion').textContent = slsFigures.length > 0 ? (Math.random() * 0.4 + 0.1).toFixed(2) : '—';
+  document.getElementById('slsStatDepth').textContent = slsFigures.length > 0 ? (1.2 + Math.random() * 2.5).toFixed(1) + 'm' : '—';
+
+  // Scan line overlay
+  const scanY = ((slsPhase / (Math.PI * 2)) % 1) * cH;
+  slsCtx.strokeStyle = 'rgba(100,200,255,0.06)';
+  slsCtx.lineWidth = 1.5;
+  slsCtx.beginPath();
+  slsCtx.moveTo(0, scanY); slsCtx.lineTo(cW, scanY);
+  slsCtx.stroke();
+}
+
+function _drawDotGrid(cW, cH) {
+  const density = slsDensity;
+  const cols = density, rows = Math.floor(density * (cH / cW));
+  const dx = cW / cols, dy = cH / rows;
+
+  slsCtx.save();
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const bx = (col + 0.5) * dx;
+      const by = (row + 0.5) * dy;
+      // Distort near figures (simulated depth disruption)
+      let distortion = 0;
+      slsFigures.forEach(f => {
+        const fx = f.cx * cW, fy = f.cy * cH;
+        const dist = Math.hypot(bx - fx, by - fy);
+        distortion += Math.max(0, 1 - dist / (f.scale * cW * 1.5)) * 6;
+      });
+      const nx = bx + (Math.random() - 0.5) * distortion;
+      const ny = by + (Math.random() - 0.5) * distortion;
+      const alpha = 0.12 + distortion * 0.04 + Math.sin(slsPhase + col * 0.3 + row * 0.2) * 0.03;
+      const r = distortion > 1 ? 2.5 : 1.2;
+      slsCtx.beginPath();
+      slsCtx.arc(nx, ny, r, 0, Math.PI * 2);
+      slsCtx.fillStyle = distortion > 2
+        ? `rgba(0,229,255,${Math.min(0.9, alpha + 0.3)})`
+        : `rgba(100,200,255,${alpha})`;
+      slsCtx.fill();
+    }
+  }
+  slsCtx.restore();
+}
+
+function _drawStickFigure(f, cW, cH, sway, breathe) {
+  const px = (j) => (f.cx + f.joints[j][0] + sway) * cW;
+  const py = (j) => (f.cy + f.joints[j][1] + breathe) * cH;
+  const alpha = f.opacity;
+
+  // Bones
+  slsCtx.save();
+  slsCtx.strokeStyle = `rgba(0,229,255,${alpha * 0.85})`;
+  slsCtx.lineWidth = 2;
+  slsCtx.shadowColor = 'rgba(0,229,255,0.5)';
+  slsCtx.shadowBlur = 8;
+  SKELETON_CONNECTIONS.forEach(([a, b]) => {
+    slsCtx.beginPath();
+    slsCtx.moveTo(px(a), py(a));
+    slsCtx.lineTo(px(b), py(b));
+    slsCtx.stroke();
+  });
+
+  // Joints
+  slsCtx.shadowBlur = 12;
+  f.joints.forEach((_, i) => {
+    const isHead = i === 0;
+    slsCtx.beginPath();
+    slsCtx.arc(px(i), py(i), isHead ? 7 : 3.5, 0, Math.PI * 2);
+    slsCtx.fillStyle = isHead
+      ? `rgba(0,229,255,${alpha})`
+      : `rgba(150,230,255,${alpha * 0.9})`;
+    slsCtx.fill();
+    // Head circle
+    if (isHead) {
+      slsCtx.strokeStyle = `rgba(0,229,255,${alpha * 0.6})`;
+      slsCtx.lineWidth = 1;
+      slsCtx.beginPath();
+      slsCtx.arc(px(0), py(0), 12, 0, Math.PI * 2);
+      slsCtx.stroke();
+    }
+  });
+
+  // Figure ID label
+  slsCtx.shadowBlur = 0;
+  slsCtx.fillStyle = `rgba(0,229,255,${alpha * 0.6})`;
+  slsCtx.font = '8px Share Tech Mono';
+  slsCtx.fillText('#' + f.id, px(0) + 14, py(0) - 6);
+
+  slsCtx.restore();
+}
+
+function _drawPointCloud(f, cW, cH) {
+  const alpha = f.opacity;
+  slsCtx.save();
+  // Scatter ~80 points around the figure's bounding volume
+  for (let i = 0; i < 80; i++) {
+    const jIdx = Math.floor(Math.random() * f.joints.length);
+    const jx = (f.cx + f.joints[jIdx][0]) * cW + (Math.random() - 0.5) * 18;
+    const jy = (f.cy + f.joints[jIdx][1]) * cH + (Math.random() - 0.5) * 18;
+    const depth = 0.5 + Math.random() * 0.5;
+    slsCtx.beginPath();
+    slsCtx.arc(jx, jy, depth * 2, 0, Math.PI * 2);
+    slsCtx.fillStyle = `rgba(0,${Math.floor(180 + depth * 75)},${Math.floor(200 + depth * 55)},${alpha * depth * 0.8})`;
+    slsCtx.fill();
+  }
+  slsCtx.restore();
+}
+
+function _drawWireframe(f, cW, cH, sway) {
+  const px = (j) => (f.cx + f.joints[j][0] + sway) * cW;
+  const py = (j) => (f.cy + f.joints[j][1]) * cH;
+  const alpha = f.opacity;
+  slsCtx.save();
+
+  // Draw all joint-to-joint connections as thin wireframe
+  for (let a = 0; a < f.joints.length; a++) {
+    for (let b = a + 1; b < f.joints.length; b++) {
+      const dist = Math.hypot(f.joints[a][0] - f.joints[b][0], f.joints[a][1] - f.joints[b][1]);
+      if (dist < 0.22 * f.scale * 1.8) {
+        slsCtx.strokeStyle = `rgba(0,229,255,${alpha * 0.25})`;
+        slsCtx.lineWidth = 0.7;
+        slsCtx.beginPath();
+        slsCtx.moveTo(px(a), py(a));
+        slsCtx.lineTo(px(b), py(b));
+        slsCtx.stroke();
+      }
+    }
+  }
+  // Draw skeleton over wireframe
+  slsCtx.strokeStyle = `rgba(0,229,255,${alpha * 0.7})`;
+  slsCtx.lineWidth = 1.5;
+  SKELETON_CONNECTIONS.forEach(([a, b]) => {
+    slsCtx.beginPath();
+    slsCtx.moveTo(px(a), py(a));
+    slsCtx.lineTo(px(b), py(b));
+    slsCtx.stroke();
+  });
+  slsCtx.restore();
+}
+
+function addSLSLog(f) {
+  slsLogEntries.unshift({ id: f.id, time: f.detectedAt, joints: f.joints.length });
+  if (slsLogEntries.length > 8) slsLogEntries.pop();
+  const el = document.getElementById('slsFigList');
+  el.innerHTML = slsLogEntries.map(e =>
+    `<div class="sls-figure-entry">
+      <span>FIG-${String(e.id).padStart(3,'0')} &nbsp; ${e.joints} joints</span>
+      <span class="f-age">${e.time}</span>
+    </div>`
+  ).join('') || '<span style="color:rgba(212,197,169,0.2)">No figures detected...</span>';
+}
+
+function showSLSAlert() {
+  const el = document.getElementById('slsAlert');
+  el.classList.add('visible');
+  clearTimeout(slsAlertTimer);
+  slsAlertTimer = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+document.getElementById('slsDensity').oninput = function() {
+  slsDensity = parseInt(this.value);
+  document.getElementById('slsDensityVal').textContent = this.value;
+};
+document.getElementById('slsSens').oninput = function() {
+  slsSensitivity = parseInt(this.value);
+  document.getElementById('slsSensVal').textContent = this.value;
+};
+
+// Register service worker (PWA offline support)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+// Start viz immediately (simulated until mic)
+startVisualization();
+startEMFSimulation();
+</script>
+</body>
+</html>
