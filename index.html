@@ -1931,12 +1931,36 @@ async function _startIR() {
 
   try {
     irStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+      video: { facingMode: 'environment' }
     });
     irVideo.srcObject = irStream;
-    irVideo.play();
-    log('[ IR ] Camera feed acquired — applying thermal overlay', 'detect');
-    irVideo.addEventListener('loadeddata', startIRProcessing, { once: true });
+    irVideo.setAttribute('playsinline', true);
+    irVideo.setAttribute('muted', true);
+    irVideo.muted = true;
+
+    // Use canplay + fallback timeout for mobile Chrome reliability
+    const startProcessing = () => {
+      if (irVideo.readyState >= 2) {
+        log('[ IR ] Camera feed active — thermal overlay running', 'detect');
+        startIRProcessing();
+      } else {
+        setTimeout(startProcessing, 200);
+      }
+    };
+
+    irVideo.addEventListener('canplay', startProcessing, { once: true });
+    irVideo.addEventListener('loadeddata', startProcessing, { once: true });
+
+    await irVideo.play().catch(() => {});
+
+    // Hard fallback — start after 1.5s no matter what
+    setTimeout(() => {
+      if (irRunning && !irAnimFrame) {
+        log('[ IR ] Fallback start triggered', 'event');
+        startIRProcessing();
+      }
+    }, 1500);
+
   } catch(e) {
     log('[ IR ] Camera unavailable — running thermal simulation', 'event');
     startIRSimulation();
@@ -1955,11 +1979,10 @@ function _stopIR() {
 }
 
 function startIRProcessing() {
-  // Use full 320x240 for much sharper thermal detail
+  if (!irRunning) return;
   const offscreen = document.createElement('canvas');
-  offscreen.width = 320; offscreen.height = 240;
+  offscreen.width = 160; offscreen.height = 120;
   const offCtx = offscreen.getContext('2d');
-  // Enable smoothing on capture canvas
   offCtx.imageSmoothingEnabled = true;
   offCtx.imageSmoothingQuality = 'high';
 
@@ -1967,10 +1990,16 @@ function startIRProcessing() {
     if (!irRunning) return;
     irAnimFrame = requestAnimationFrame(processFrame);
     irSimPhase += 0.02;
+    slsPhase += 0.018;
 
-    offCtx.drawImage(irVideo, 0, 0, 320, 240);
-    const frame = offCtx.getImageData(0, 0, 320, 240);
-    applyIROverlay(frame.data, 320, 240);
+    // Guard: skip if video not ready
+    if (irVideo.readyState < 2 || irVideo.videoWidth === 0) return;
+
+    try {
+      offCtx.drawImage(irVideo, 0, 0, 160, 120);
+      const frame = offCtx.getImageData(0, 0, 160, 120);
+      applyIROverlay(frame.data, 160, 120);
+    } catch(e) {}
   }
   processFrame();
 }
@@ -2111,11 +2140,7 @@ function applyIROverlay(rawData, W, H) {
   updateIRStats(outData, W, H);
 }
 
-function renderIRCanvas(data, W, H) {
-  const cW = irCanvas.width, cH = irCanvas.height;
-
-  // Two-pass upscale: first 2x then to final size — much sharper than direct scale
-  const small = new ImageData(data, W, H);
+function _baseRenderIR(data, W, H) {
   const pass1 = document.createElement('canvas');
   pass1.width = W * 2; pass1.height = H * 2;
   const p1Ctx = pass1.getContext('2d');
@@ -2198,7 +2223,7 @@ let slsAlertTimer = null;
 let slsPrevDepth = null;
 let slsTotalDetected = 0;
 
-const slsCanvas = document.getElementById('slsCanvas');
+const slsCanvas = document.getElementById('irCanvas');
 const slsCtx = slsCanvas.getContext('2d');
 const slsVideo = document.getElementById('slsVideo');
 
@@ -2523,17 +2548,43 @@ let camMode = 'ir'; // 'ir', 'sls', 'both'
 
 function setCamMode(mode) {
   camMode = mode;
+
+  // Update buttons
   document.querySelectorAll('.cam-mode-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('camMode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
-  // Show/hide controls
-  document.getElementById('irPaletteRow').style.display = (mode === 'sls') ? 'none' : 'flex';
-  document.getElementById('irLegend').style.display = (mode === 'sls') ? 'none' : 'flex';
-  document.getElementById('slsControlsRow').style.display = (mode === 'ir') ? 'none' : 'block';
+  const btnMap = { ir: 'camModeIR', sls: 'camModeSLS', both: 'camModeBoth' };
+  const btn = document.getElementById(btnMap[mode]);
+  if (btn) btn.classList.add('active');
+
+  // Show/hide IR palette
+  const pal = document.getElementById('irPaletteRow');
+  const leg = document.getElementById('irLegend');
+  const sls = document.getElementById('slsControlsRow');
+  if (pal) pal.style.display = (mode === 'sls') ? 'none' : 'flex';
+  if (leg) leg.style.display = (mode === 'sls') ? 'none' : 'flex';
+  if (sls) sls.style.display = (mode === 'ir') ? 'none' : 'block';
+
+  // If switching to SLS or Combined and camera isn't running, start simulation
+  if ((mode === 'sls' || mode === 'both') && !irRunning) {
+    irRunning = true;
+    document.getElementById('irBtn').textContent = '■ DEACTIVATE IR SENSOR';
+    document.getElementById('irBtn').classList.add('running');
+    startIRSimulation();
+    log('[ CAM ] SLS simulation started', 'detect');
+  }
+
+  // If SLS only mode, draw dot grid immediately so screen isn't black
+  if (mode === 'sls') {
+    const cW = irCanvas.width, cH = irCanvas.height;
+    irCtx.fillStyle = 'rgba(0,4,12,1)';
+    irCtx.fillRect(0, 0, cW, cH);
+    _drawDotGrid(cW, cH);
+  }
+
   log('[ CAM ] Mode: ' + mode.toUpperCase());
 }
 
 // Override the IR render to also paint SLS skeleton on top
-const _origRenderIRCanvas = renderIRCanvas;
+const _origRenderIRCanvas = window._baseRenderIR;
 function renderIRCanvas(data, W, H) {
   const cW = irCanvas.width, cH = irCanvas.height;
   irCtx.clearRect(0, 0, cW, cH);
@@ -2541,25 +2592,26 @@ function renderIRCanvas(data, W, H) {
   irCtx.fillRect(0, 0, cW, cH);
 
   if (camMode === 'ir' || camMode === 'both') {
-    // Draw IR thermal
+    // Two-pass upscale for sharpness
     const small = new ImageData(data, W, H);
-    const off = document.createElement('canvas');
-    off.width = W; off.height = H;
-    off.getContext('2d').putImageData(small, 0, 0);
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    tmp.getContext('2d').putImageData(small, 0, 0);
+    const pass1 = document.createElement('canvas');
+    pass1.width = W * 2; pass1.height = H * 2;
+    const p1Ctx = pass1.getContext('2d');
+    p1Ctx.imageSmoothingEnabled = true;
+    p1Ctx.imageSmoothingQuality = 'high';
+    p1Ctx.drawImage(tmp, 0, 0, W * 2, H * 2);
     irCtx.globalAlpha = camMode === 'both' ? 0.7 : 1;
     irCtx.imageSmoothingEnabled = true;
-    irCtx.drawImage(off, 0, 0, cW, cH);
+    irCtx.imageSmoothingQuality = 'high';
+    irCtx.drawImage(pass1, 0, 0, cW, cH);
     irCtx.globalAlpha = 1;
-  } else {
-    // SLS-only: dark background with dot grid
-    irCtx.fillStyle = 'rgba(0,4,12,1)';
-    irCtx.fillRect(0, 0, cW, cH);
   }
 
   if (camMode === 'sls' || camMode === 'both') {
-    // Draw dot grid
     _drawDotGrid(cW, cH);
-    // Draw all SLS figures on top
     for (const f of slsFigures) {
       const sway = Math.sin(slsPhase * 0.8 + f.phase) * 0.012 * f.scale;
       const breathe = Math.sin(slsPhase * 1.2 + f.phase) * 0.005 * f.scale;
