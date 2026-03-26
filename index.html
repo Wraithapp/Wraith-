@@ -1087,7 +1087,8 @@
     <button class="tab active" onclick="switchTab('sb')">SPIRIT BOX</button>
     <button class="tab" onclick="switchTab('evp')">EVP REC</button>
     <button class="tab" onclick="switchTab('rev')">REVERSE</button>
-    <button class="tab" onclick="switchTab('ir')">IR / SLS</button>
+    <button class="tab" onclick="switchTab('ir')">IR CAM</button>
+    <button class="tab" onclick="switchTab('sls')">SLS</button>
     <button class="tab" onclick="switchTab('lib')" style="color:rgba(255,215,0,0.6)">📁 LIB</button>
   </div>
 
@@ -1214,15 +1215,11 @@
     </div>
   </div>
 
-  <!-- IR / SLS Unified Camera Panel -->
+  <!-- IR Thermal Panel -->
   <div class="panel" id="panel-ir">
-
     <div class="ir-camera-wrap" id="irCameraWrap" onclick="toggleIRFullscreen(event)">
-      <!-- Single canvas: camera + IR thermal + SLS skeleton all drawn here -->
       <canvas id="irCanvas" width="760" height="440"></canvas>
       <video id="irVideo" style="display:none" autoplay playsinline muted></video>
-      <video id="slsVideo" style="display:none" autoplay playsinline muted></video>
-
       <div class="ir-overlay">
         <div class="ir-overlay-corner tl"></div>
         <div class="ir-overlay-corner tr"></div>
@@ -1231,89 +1228,110 @@
         <div class="ir-crosshair"></div>
         <div class="ir-temp-display" id="irTempDisplay">--.- °C</div>
         <div class="ir-motion-alert" id="irMotionAlert">⚠ MOTION DETECTED</div>
-        <div class="sls-figure-count" id="slsFigCount" style="position:absolute;bottom:6px;left:8px;font-size:0.55rem;letter-spacing:0.12em;color:rgba(100,200,255,0.7)">FIGURES: 0</div>
-        <div class="sls-alert" id="slsAlert" style="position:absolute;bottom:6px;right:8px;font-size:0.55rem;letter-spacing:0.15em;color:#00e5ff;text-shadow:0 0 8px #00e5ff;opacity:0;transition:opacity 0.2s">⬟ FIGURE MAPPED</div>
       </div>
       <div class="rec-badge" id="irRecBadge"><span class="rec-badge-dot"></span>REC</div>
       <button class="fullscreen-close" onclick="toggleIRFullscreen(event)">✕ CLOSE</button>
       <div class="expand-hint">⤢ TAP TO EXPAND</div>
     </div>
 
-    <!-- Mode toggle row -->
-    <div class="cam-mode-row">
-      <button class="cam-mode-btn active" id="camModeIR" onclick="setCamMode('ir')">🌡 IR THERMAL</button>
-      <button class="cam-mode-btn" id="camModeSLS" onclick="setCamMode('sls')">⬟ SLS SKELETON</button>
-      <button class="cam-mode-btn" id="camModeBoth" onclick="setCamMode('both')">◈ COMBINED</button>
-    </div>
-
-    <!-- Unified stats -->
-    <div class="ir-stats-grid" style="grid-template-columns:repeat(4,1fr)">
-      <div class="ir-stat"><div class="ir-stat-label">Min °C</div><div class="ir-stat-val" id="irMin">--</div></div>
-      <div class="ir-stat"><div class="ir-stat-label">Max °C</div><div class="ir-stat-val" id="irMax">--</div></div>
-      <div class="ir-stat"><div class="ir-stat-label">Figures</div><div class="sls-stat-val" id="slsStatFigs" style="font-size:0.85rem;color:rgba(100,200,255,0.9);text-shadow:0 0 6px rgba(0,229,255,0.4)">0</div></div>
-      <div class="ir-stat"><div class="ir-stat-label">Joints</div><div class="sls-stat-val" id="slsStatJoints" style="font-size:0.85rem;color:rgba(100,200,255,0.9);text-shadow:0 0 6px rgba(0,229,255,0.4)">0</div></div>
-    </div>
-
-    <!-- IR legend -->
-    <div class="ir-legend" id="irLegend">
-      <span style="background:#000010"></span><span style="background:#00008b"></span>
-      <span style="background:#0000ff"></span><span style="background:#00ffff"></span>
-      <span style="background:#00ff00"></span><span style="background:#ffff00"></span>
-      <span style="background:#ff8c00"></span><span style="background:#ff0000"></span>
-      <span style="background:#ffffff"></span>
-    </div>
+    <div class="ir-legend" id="irLegend"></div>
     <div class="ir-legend-labels"><span>COLD</span><span>AMBIENT</span><span>HOT</span></div>
 
-    <!-- IR controls -->
-    <div class="ir-palette-row" id="irPaletteRow">
+    <div class="ir-stats-grid">
+      <div class="ir-stat"><div class="ir-stat-label">Min Temp</div><div class="ir-stat-val" id="irMin">--.-</div></div>
+      <div class="ir-stat"><div class="ir-stat-label">Max Temp</div><div class="ir-stat-val" id="irMax">--.-</div></div>
+      <div class="ir-stat"><div class="ir-stat-label">Motion Δ</div><div class="ir-stat-val" id="irMotionVal">0.0</div></div>
+    </div>
+
+    <div class="section-label">IR Palette</div>
+    <div class="ir-palette-row">
       <button class="palette-btn active" id="pal0" onclick="setIRPalette(0)">Inferno</button>
       <button class="palette-btn" id="pal1" onclick="setIRPalette(1)">Arctic</button>
       <button class="palette-btn" id="pal2" onclick="setIRPalette(2)">Night Vision</button>
       <button class="palette-btn" id="pal3" onclick="setIRPalette(3)">Spectral</button>
     </div>
 
-    <!-- SLS controls -->
-    <div id="slsControlsRow" style="display:none">
-      <div class="section-label">Skeleton Style</div>
-      <div class="sls-mode-grid">
-        <div class="mode-card active" id="slsMode0" onclick="setSLSMode(0)" style="border-color:rgba(100,200,255,0.2)">
-          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Stick Figure</div>
-          <div class="mode-card-desc">Classic SLS skeleton</div>
-        </div>
-        <div class="mode-card" id="slsMode1" onclick="setSLSMode(1)" style="border-color:rgba(100,200,255,0.1)">
-          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Point Cloud</div>
-          <div class="mode-card-desc">Depth point scatter</div>
-        </div>
-        <div class="mode-card" id="slsMode2" onclick="setSLSMode(2)" style="border-color:rgba(100,200,255,0.1)">
-          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Wireframe</div>
-          <div class="mode-card-desc">3D mesh projection</div>
-        </div>
-        <div class="mode-card" id="slsMode3" onclick="setSLSMode(3)" style="border-color:rgba(100,200,255,0.1)">
-          <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Ghost Tint</div>
-          <div class="mode-card-desc">Blue tinted figure</div>
-        </div>
-      </div>
-    </div>
-
     <div class="ir-sensitivity-row">
       <div class="control-group">
-        <span class="ctrl-label">IR Sensitivity</span>
+        <span class="ctrl-label">Sensitivity</span>
         <input type="range" id="irSensitivity" min="1" max="20" value="8">
         <span class="ctrl-value" id="irSensVal">8</span>
       </div>
       <div class="control-group">
-        <span class="ctrl-label">SLS Sensitivity</span>
+        <span class="ctrl-label">Motion Threshold</span>
+        <input type="range" id="irMotionThresh" min="1" max="50" value="15">
+        <span class="ctrl-value" id="irMotionThreshVal">15</span>
+      </div>
+    </div>
+
+    <button class="btn-main" id="irBtn" onclick="toggleIR()">▶ ACTIVATE IR CAMERA</button>
+    <button class="btn-main btn-record" id="irRecBtn" onclick="toggleSessionRecord('ir')">⬤ RECORD SESSION</button>
+  </div>
+
+  <!-- SLS Panel -->
+  <div class="panel" id="panel-sls">
+    <div class="sls-viewport" id="slsViewport" onclick="toggleSLSFullscreen(event)">
+      <canvas id="slsCanvas" width="760" height="440"></canvas>
+      <video id="slsVideo" style="display:none" autoplay playsinline muted></video>
+      <div class="sls-hud">
+        <div class="sls-corner tl"></div>
+        <div class="sls-corner tr"></div>
+        <div class="sls-corner bl"></div>
+        <div class="sls-corner br"></div>
+        <div class="sls-label">SLS STRUCTURED LIGHT SENSOR</div>
+        <div class="sls-figure-count" id="slsFigCount">FIGURES: 0</div>
+        <div class="sls-alert" id="slsAlert">⬟ FIGURE MAPPED</div>
+      </div>
+      <div class="rec-badge" id="slsRecBadge"><span class="rec-badge-dot"></span>REC</div>
+      <button class="sls-fullscreen-close" onclick="toggleSLSFullscreen(event)">✕ CLOSE</button>
+      <div class="expand-hint">⤢ TAP TO EXPAND</div>
+    </div>
+
+    <div class="sls-stats-grid">
+      <div class="sls-stat"><div class="sls-stat-label">Figures</div><div class="sls-stat-val" id="slsStatFigs">0</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Joints</div><div class="sls-stat-val" id="slsStatJoints">0</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Motion</div><div class="sls-stat-val" id="slsStatMotion">—</div></div>
+      <div class="sls-stat"><div class="sls-stat-label">Depth</div><div class="sls-stat-val" id="slsStatDepth">—</div></div>
+    </div>
+
+    <div class="section-label">Skeleton Style</div>
+    <div class="sls-mode-grid">
+      <div class="mode-card active" id="slsMode0" onclick="setSLSMode(0)" style="border-color:rgba(100,200,255,0.2)">
+        <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Stick Figure</div>
+        <div class="mode-card-desc">Classic SLS skeleton</div>
+      </div>
+      <div class="mode-card" id="slsMode1" onclick="setSLSMode(1)" style="border-color:rgba(100,200,255,0.1)">
+        <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Point Cloud</div>
+        <div class="mode-card-desc">Depth point scatter</div>
+      </div>
+      <div class="mode-card" id="slsMode2" onclick="setSLSMode(2)" style="border-color:rgba(100,200,255,0.1)">
+        <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Wireframe</div>
+        <div class="mode-card-desc">3D mesh projection</div>
+      </div>
+      <div class="mode-card" id="slsMode3" onclick="setSLSMode(3)" style="border-color:rgba(100,200,255,0.1)">
+        <div class="mode-card-title" style="color:rgba(100,200,255,0.9)">Ghost Tint</div>
+        <div class="mode-card-desc">Blue tinted figure</div>
+      </div>
+    </div>
+
+    <div class="sb-controls" style="grid-template-columns:1fr 1fr;gap:10px;margin:10px 0">
+      <div class="control-group">
+        <span class="ctrl-label">Dot Density</span>
+        <input type="range" id="slsDensity" min="4" max="20" value="10">
+        <span class="ctrl-value" id="slsDensityVal">10</span>
+      </div>
+      <div class="control-group">
+        <span class="ctrl-label">Sensitivity</span>
         <input type="range" id="slsSens" min="1" max="10" value="5">
         <span class="ctrl-value" id="slsSensVal">5</span>
       </div>
     </div>
 
-    <!-- Figure log -->
     <div class="section-label" style="margin-bottom:6px">Figure Log</div>
     <div class="sls-figure-list" id="slsFigList"><span style="color:rgba(212,197,169,0.2)">No figures detected...</span></div>
 
-    <button class="btn-main" id="irBtn" onclick="toggleIR()">▶ ACTIVATE CAMERA</button>
-    <button class="btn-main btn-record" id="irRecBtn" onclick="toggleSessionRecord('ir')">⬤ RECORD SESSION</button>
+    <button class="btn-main" id="slsBtn" onclick="toggleSLS()" style="border-color:rgba(100,200,255,0.4);color:rgba(100,200,255,0.8)">▶ ACTIVATE SLS SENSOR</button>
+    <button class="btn-main btn-record" id="slsRecBtn" onclick="toggleSessionRecord('sls')">⬤ RECORD SLS SESSION</button>
   </div>
 
   <!-- Library Panel -->
@@ -2140,7 +2158,7 @@ function applyIROverlay(rawData, W, H) {
   updateIRStats(outData, W, H);
 }
 
-function _baseRenderIR(data, W, H) {
+function renderIRCanvas(data, W, H) {
   const pass1 = document.createElement('canvas');
   pass1.width = W * 2; pass1.height = H * 2;
   const p1Ctx = pass1.getContext('2d');
@@ -2223,7 +2241,7 @@ let slsAlertTimer = null;
 let slsPrevDepth = null;
 let slsTotalDetected = 0;
 
-const slsCanvas = document.getElementById('irCanvas');
+const slsCanvas = document.getElementById('slsCanvas');
 const slsCtx = slsCanvas.getContext('2d');
 const slsVideo = document.getElementById('slsVideo');
 
@@ -2538,116 +2556,14 @@ function showSLSAlert() {
   slsAlertTimer = setTimeout(() => el.classList.remove('visible'), 2500);
 }
 
+document.getElementById('slsDensity').oninput = function() {
+  slsDensity = parseInt(this.value);
+  document.getElementById('slsDensityVal').textContent = this.value;
+};
 document.getElementById('slsSens').oninput = function() {
   slsSensitivity = parseInt(this.value);
   document.getElementById('slsSensVal').textContent = this.value;
 };
-
-// ─── COMBINED CAMERA MODE ────────────────────────────────────────
-let camMode = 'ir'; // 'ir', 'sls', 'both'
-
-function setCamMode(mode) {
-  camMode = mode;
-
-  // Update buttons
-  document.querySelectorAll('.cam-mode-btn').forEach(b => b.classList.remove('active'));
-  const btnMap = { ir: 'camModeIR', sls: 'camModeSLS', both: 'camModeBoth' };
-  const btn = document.getElementById(btnMap[mode]);
-  if (btn) btn.classList.add('active');
-
-  // Show/hide IR palette
-  const pal = document.getElementById('irPaletteRow');
-  const leg = document.getElementById('irLegend');
-  const sls = document.getElementById('slsControlsRow');
-  if (pal) pal.style.display = (mode === 'sls') ? 'none' : 'flex';
-  if (leg) leg.style.display = (mode === 'sls') ? 'none' : 'flex';
-  if (sls) sls.style.display = (mode === 'ir') ? 'none' : 'block';
-
-  // If switching to SLS or Combined and camera isn't running, start simulation
-  if ((mode === 'sls' || mode === 'both') && !irRunning) {
-    irRunning = true;
-    document.getElementById('irBtn').textContent = '■ DEACTIVATE IR SENSOR';
-    document.getElementById('irBtn').classList.add('running');
-    startIRSimulation();
-    log('[ CAM ] SLS simulation started', 'detect');
-  }
-
-  // If SLS only mode, draw dot grid immediately so screen isn't black
-  if (mode === 'sls') {
-    const cW = irCanvas.width, cH = irCanvas.height;
-    irCtx.fillStyle = 'rgba(0,4,12,1)';
-    irCtx.fillRect(0, 0, cW, cH);
-    _drawDotGrid(cW, cH);
-  }
-
-  log('[ CAM ] Mode: ' + mode.toUpperCase());
-}
-
-// Override the IR render to also paint SLS skeleton on top
-const _origRenderIRCanvas = window._baseRenderIR;
-function renderIRCanvas(data, W, H) {
-  const cW = irCanvas.width, cH = irCanvas.height;
-  irCtx.clearRect(0, 0, cW, cH);
-  irCtx.fillStyle = 'rgba(0,2,8,0.95)';
-  irCtx.fillRect(0, 0, cW, cH);
-
-  if (camMode === 'ir' || camMode === 'both') {
-    // Two-pass upscale for sharpness
-    const small = new ImageData(data, W, H);
-    const tmp = document.createElement('canvas');
-    tmp.width = W; tmp.height = H;
-    tmp.getContext('2d').putImageData(small, 0, 0);
-    const pass1 = document.createElement('canvas');
-    pass1.width = W * 2; pass1.height = H * 2;
-    const p1Ctx = pass1.getContext('2d');
-    p1Ctx.imageSmoothingEnabled = true;
-    p1Ctx.imageSmoothingQuality = 'high';
-    p1Ctx.drawImage(tmp, 0, 0, W * 2, H * 2);
-    irCtx.globalAlpha = camMode === 'both' ? 0.7 : 1;
-    irCtx.imageSmoothingEnabled = true;
-    irCtx.imageSmoothingQuality = 'high';
-    irCtx.drawImage(pass1, 0, 0, cW, cH);
-    irCtx.globalAlpha = 1;
-  }
-
-  if (camMode === 'sls' || camMode === 'both') {
-    _drawDotGrid(cW, cH);
-    for (const f of slsFigures) {
-      const sway = Math.sin(slsPhase * 0.8 + f.phase) * 0.012 * f.scale;
-      const breathe = Math.sin(slsPhase * 1.2 + f.phase) * 0.005 * f.scale;
-      if (slsMode === 0 || slsMode === 3) _drawStickFigure(f, cW, cH, sway, breathe);
-      else if (slsMode === 1) _drawPointCloud(f, cW, cH);
-      else if (slsMode === 2) _drawWireframe(f, cW, cH, sway);
-    }
-  }
-
-  // Vignette
-  const grad = irCtx.createRadialGradient(cW/2, cH/2, cH*0.3, cW/2, cH/2, cH*0.9);
-  grad.addColorStop(0, 'transparent');
-  grad.addColorStop(1, 'rgba(0,0,0,0.5)');
-  irCtx.fillStyle = grad;
-  irCtx.fillRect(0, 0, cW, cH);
-
-  // Scan line
-  const scanY = ((Date.now() / 3000) % 1) * cH;
-  irCtx.strokeStyle = camMode === 'sls' ? 'rgba(100,200,255,0.08)' : 'rgba(255,100,0,0.1)';
-  irCtx.lineWidth = 2;
-  irCtx.beginPath();
-  irCtx.moveTo(0, scanY); irCtx.lineTo(cW, scanY);
-  irCtx.stroke();
-}
-
-// Also run SLS figure simulation inside IR loop when SLS/both mode active
-const _origStartIRSimulation = startIRSimulation;
-function startIRSimulation() {
-  _origStartIRSimulation();
-}
-
-// Patch _startSLS to just activate the figure engine without needing its own canvas
-function toggleSLS() { /* merged into IR cam */ }
-function _startSLS() { /* merged */ }
-function _stopSLS() { /* merged */ }
-
 
 function toggleIRFullscreen(e) {
   e.stopPropagation();
@@ -2655,7 +2571,6 @@ function toggleIRFullscreen(e) {
   const isFS = wrap.classList.toggle('fullscreen');
   document.body.style.overflow = isFS ? 'hidden' : '';
   if (isFS) {
-    // Try native fullscreen
     if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => {});
     log('[ IR ] Expanded to fullscreen');
   } else {
@@ -2666,11 +2581,24 @@ function toggleIRFullscreen(e) {
 function toggleSLSFullscreen(e) {
   e.stopPropagation();
   const wrap = document.getElementById('slsViewport');
+  if (!wrap) return;
   const isFS = wrap.classList.toggle('fullscreen');
   document.body.style.overflow = isFS ? 'hidden' : '';
   if (isFS) {
     if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => {});
     log('[ SLS ] Expanded to fullscreen');
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+}
+  e.stopPropagation();
+  const wrap = document.getElementById('irCameraWrap');
+  const isFS = wrap.classList.toggle('fullscreen');
+  document.body.style.overflow = isFS ? 'hidden' : '';
+  if (isFS) {
+    // Try native fullscreen
+    if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => {});
+    log('[ IR ] Expanded to fullscreen');
   } else {
     if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
   }
