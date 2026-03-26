@@ -448,41 +448,59 @@ function startEMF(){
 }
 
 // ══ SPIRIT BOX — REAL INTERNET RADIO SWEEP ══
-// Uses actual live radio streams, sweeps through them rapidly
-const RADIO_STREAMS = [
-  // Mix of talk, music, news — variety gives best spirit box effect
-  'https://streams.kqed.org/kqedradio',
-  'https://npr-ice.streamguys1.com/live.mp3',
-  'https://wnyc-fm939-ice.streamguys1.com/wnyc-fm939-public.aac',
-  'https://stream.wbez.org/wbez128.mp3',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/WBBMAM_SC',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/WINS_SC',
-  'https://live.leanstream.co/CFTR-MP3',
-  'https://icecast.walmradio.com:8443/classic',
-  'https://stream.revma.ihrhls.com/zc3469',
-  'https://stream.revma.ihrhls.com/zc7985',
-  'https://14143.live.streamtheworld.com/KKJZ_HD1AAC_SC',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/KQED_FM_SC',
-  'https://live.wostreaming.net/direct/saga-whamfmaac-ibc1',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/WKRN_SC',
-  'https://stream.revma.ihrhls.com/zc289',
-  'https://stream.revma.ihrhls.com/zc5425',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/WNBCAMAAC_SC',
-  'https://stream.revma.ihrhls.com/zc1377',
-  'https://playerservices.streamtheworld.com/api/livestream-redirect/WFAN_SC',
-  'https://stream.revma.ihrhls.com/zc4617',
-];
+let sbAudio = null;
+let sbStreams = [];
+let sbStreamIdx = 0;
+let sbSweepTimer = null;
+let sbLoaded = false;
 
-let sbAudio = null;       // current playing audio element
-let sbStreamIdx = 0;      // current stream index
-let sbSweepTimer = null;  // sweep interval
-let sbLoadTimer = null;   // stream load timeout
+// Fetch real radio stations from Radio Browser API (CORS friendly)
+async function loadRadioStations(){
+  try{
+    // Radio Browser has multiple servers — pick one
+    const servers = await fetch('https://all.api.radio-browser.info/json/servers')
+      .then(r=>r.json()).catch(()=>[{name:'de1.api.radio-browser.info'}]);
+    const server = servers[Math.floor(Math.random()*servers.length)].name;
+    const base = `https://${server}/json/stations/search`;
+
+    // Fetch English talk/news stations with high votes — best for spirit box
+    const res = await fetch(`${base}?language=english&codec=MP3&limit=60&order=votes&reverse=true&hidebroken=true`)
+      .then(r=>r.json()).catch(()=>[]);
+
+    if(res.length > 0){
+      // Shuffle for randomness
+      sbStreams = res.filter(s=>s.url_resolved&&s.url_resolved.startsWith('http'));
+      for(let i=sbStreams.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [sbStreams[i],sbStreams[j]]=[sbStreams[j],sbStreams[i]];
+      }
+      sbLoaded = true;
+      log('[ SB ] '+sbStreams.length+' live stations loaded','det');
+    } else {
+      log('[ SB ] Could not load stations — check connection','ev');
+    }
+  }catch(e){
+    log('[ SB ] Station load failed: '+e.message,'ev');
+  }
+}
+
+// Load stations on startup
+loadRadioStations();
 
 function toggleSB(){
   sbRunning ? _stopSB() : _startSB();
 }
 
-function _startSB(){
+async function _startSB(){
+  if(!sbLoaded){
+    log('[ SB ] Loading stations...','ev');
+    await loadRadioStations();
+  }
+  if(!sbStreams.length){
+    log('[ SB ] No stations available','ev');
+    return;
+  }
+
   sbRunning = true;
   sbScanSpeed = +document.getElementById('sbSpeed').value;
   document.getElementById('sbBtn').textContent = '■ STOP SCAN';
@@ -490,69 +508,52 @@ function _startSB(){
   document.getElementById('dSB').className = 'dot on';
   document.getElementById('freqNum').classList.add('scan');
   document.getElementById('freqBand').textContent = 'LIVE RADIO — SCANNING';
-  log('[ SPIRIT BOX ] Live radio sweep initiated', 'ev');
-
-  // Shuffle streams for randomness
-  for(let i=RADIO_STREAMS.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [RADIO_STREAMS[i],RADIO_STREAMS[j]]=[RADIO_STREAMS[j],RADIO_STREAMS[i]];
-  }
-
-  _loadNextStream();
+  log('[ SPIRIT BOX ] Live sweep — '+sbStreams.length+' stations','ev');
+  _nextStation();
 }
 
-function _loadNextStream(){
+function _nextStation(){
   if(!sbRunning) return;
 
-  // Kill previous stream
+  // Stop current
   if(sbAudio){
-    sbAudio.pause();
-    sbAudio.src='';
-    sbAudio=null;
+    try{ sbAudio.pause(); }catch(e){}
+    sbAudio.src = '';
+    sbAudio = null;
   }
 
-  sbStreamIdx = (sbStreamIdx + 1) % RADIO_STREAMS.length;
-  const url = RADIO_STREAMS[sbStreamIdx];
+  sbStreamIdx = (sbStreamIdx + 1) % sbStreams.length;
+  const station = sbStreams[sbStreamIdx];
+  const url = station.url_resolved || station.url;
 
-  // Update display
-  sbFreq = 87.5 + (sbStreamIdx / RADIO_STREAMS.length) * 20.5;
+  // Update frequency display
+  const minFreq = 87.5, maxFreq = 108.0;
+  sbFreq = minFreq + (sbStreamIdx / sbStreams.length) * (maxFreq - minFreq);
   document.getElementById('freqNum').textContent = sbFreq.toFixed(1);
+  document.getElementById('freqBand').textContent = (station.name||'').substring(0,20).toUpperCase();
 
-  // Create audio element for streaming
+  // Play the stream
   sbAudio = new Audio();
   sbAudio.crossOrigin = 'anonymous';
   sbAudio.volume = +document.getElementById('sbVol').value / 100;
+  sbAudio.preload = 'none';
   sbAudio.src = url;
-  sbAudio.play().catch(()=>{});
+  sbAudio.play().catch(()=>{
+    // Station failed — skip immediately
+    if(sbRunning) _nextStation();
+  });
 
-  // Connect to Web Audio analyser so waveform shows real audio
-  if(audioCtx){
-    try{
-      const src = audioCtx.createMediaElementSource(sbAudio);
-      const filt = audioCtx.createBiquadFilter();
-      const types = ['lowpass','bandpass','highpass','allpass'];
-      filt.type = types[+document.getElementById('sbFilter').value];
-      filt.frequency.value = 800 + (sbStreamIdx / RADIO_STREAMS.length) * 2000;
-      filt.Q.value = 1.5;
-      src.connect(filt);
-      filt.connect(analyser || audioCtx.destination);
-      if(analyser) analyser.connect(audioCtx.destination);
-    }catch(e){
-      // Element already connected — just play
-    }
-  }
+  if(Math.random()>0.75) log('[ SB ] '+station.name+' @ '+sbFreq.toFixed(1)+'MHz','det');
 
-  if(Math.random()>0.7) log('[ SB ] Signal @ '+sbFreq.toFixed(1)+' MHz','det');
-
-  // Schedule next station sweep
-  sbSweepTimer = setTimeout(_loadNextStream, sbScanSpeed);
+  // Schedule next sweep
+  clearTimeout(sbSweepTimer);
+  sbSweepTimer = setTimeout(_nextStation, sbScanSpeed);
 }
 
 function _stopSB(){
   sbRunning = false;
   clearTimeout(sbSweepTimer);
-  clearTimeout(sbLoadTimer);
-  if(sbAudio){ sbAudio.pause(); sbAudio.src=''; sbAudio=null; }
+  if(sbAudio){ try{sbAudio.pause();}catch(e){} sbAudio.src=''; sbAudio=null; }
   document.getElementById('sbBtn').textContent = '▶ INITIATE SCAN';
   document.getElementById('sbBtn').classList.remove('active');
   document.getElementById('dSB').className = 'dot';
@@ -562,36 +563,26 @@ function _stopSB(){
 }
 
 function onBandChange(v){
-  // Band selector now controls stream category feel
   const labels=['FM','AM'];
   document.getElementById('sbBandVal').textContent = labels[v];
   document.getElementById('freqBand').textContent = labels[v]+' — READY';
-  sbFreq = v==0 ? 87.5 : 540;
 }
 
-// Volume control updates live stream volume
 document.getElementById('sbVol').oninput = function(){
   document.getElementById('sbVolVal').textContent = this.value+'%';
   if(sbAudio) sbAudio.volume = this.value/100;
 };
-
-// Speed control restarts sweep at new speed
 document.getElementById('sbSpeed').oninput = function(){
   document.getElementById('sbSpeedVal').textContent = this.value+'ms';
   sbScanSpeed = +this.value;
-  if(sbRunning){
-    clearTimeout(sbSweepTimer);
-    sbSweepTimer = setTimeout(_loadNextStream, sbScanSpeed);
-  }
+  if(sbRunning){ clearTimeout(sbSweepTimer); sbSweepTimer = setTimeout(_nextStation, sbScanSpeed); }
 };
 
 function doReverseSweep(){
   if(!sbRunning){ log('[ SB ] Start scan first','ev'); return; }
-  log('[ SB ] Reversing sweep direction','ev');
-  // Sweep backwards through streams
   clearTimeout(sbSweepTimer);
-  sbStreamIdx = (sbStreamIdx - 2 + RADIO_STREAMS.length) % RADIO_STREAMS.length;
-  _loadNextStream();
+  sbStreamIdx = (sbStreamIdx - 2 + sbStreams.length) % sbStreams.length;
+  _nextStation();
 }
 
 // ══ EVP ══
