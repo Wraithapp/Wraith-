@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WRAITH">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Organic frequency-based paranormal investigation. Real radio sweep, EVP recorder, phoneme synthesizer. No AI. No word banks.">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>WRAITH</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#000;color:#d4c5a9;font-family:'Share Tech Mono',monospace;min-height:100vh}
+.app{max-width:420px;margin:0 auto;padding:0 0 60px}
+.header{text-align:center;padding:20px;border-bottom:1px solid #2a0000}
+.logo{font-family:'Cinzel',serif;font-size:2.2rem;font-weight:700;letter-spacing:0.4em;text-shadow:0 0 20px #8b0000}
+.tagline{font-size:0.52rem;letter-spacing:0.18em;color:#444;margin-top:4px}
+.viz{padding:12px 16px 6px}
+canvas{width:100%;display:block;background:#050505;border:1px solid #1a0000;border-radius:2px}
+#waveC{height:60px;margin-bottom:4px}
+#specC{height:36px}
+.emf-row{display:flex;align-items:center;gap:8px;padding:6px 16px;background:#050000}
+.emf-row label{font-size:0.48rem;letter-spacing:0.1em;color:#444}
+.emf-bar{flex:1;height:4px;background:#111;border-radius:2px;overflow:hidden}
+.emf-fill{height:100%;width:5%;border-radius:2px;transition:width 0.3s,background 0.3s;background:linear-gradient(90deg,#00ff88,#00e5ff)}
+#emfVal{font-size:0.52rem;min-width:28px;text-align:right;color:#00ff88}
+.tabs{display:flex;margin:10px 16px 0;border:1px solid #2a0000;border-radius:2px;overflow:hidden}
+.tab{flex:1;padding:10px 2px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:0.07em;color:#444;background:#000;border:none;cursor:pointer;text-transform:uppercase;border-right:1px solid #1a0000;transition:background 0.2s,color 0.2s}
+.tab:last-child{border-right:none}
+.tab.active{background:#1a0000;color:#d4c5a9}
+.panel{display:none;padding:14px 16px}
+.panel.active{display:block}
+.freq-box{text-align:center;padding:18px 10px;background:#050505;border:1px solid #2a0000;border-radius:2px;margin-bottom:10px}
+#freqNum{font-size:2.8rem;color:#00e5ff;text-shadow:0 0 18px #00e5ff;letter-spacing:0.04em;line-height:1}
+#freqNum.sc{animation:sc 0.15s infinite}
+@keyframes sc{0%{opacity:1}50%{opacity:0.5}100%{opacity:1}}
+#freqLbl{font-size:0.55rem;letter-spacing:0.14em;color:rgba(0,229,255,0.4);margin-top:5px;min-height:16px}
+.info-line{font-size:0.52rem;color:#444;letter-spacing:0.07em;margin-bottom:10px;min-height:18px}
+#sbInfo{color:rgba(0,229,255,0.45)}
+.cg2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.cg{display:flex;flex-direction:column;gap:4px}
+.cg label{font-size:0.48rem;letter-spacing:0.11em;color:#444;text-transform:uppercase}
+.cg span{font-size:0.6rem;color:#d4c5a9;text-align:right}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:#2a0000;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#c0392b;box-shadow:0 0 5px #c0392b;cursor:pointer}
+.btn{width:100%;padding:13px;background:transparent;border:1px solid #3a0000;color:#d4c5a9;font-family:'Share Tech Mono',monospace;font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;border-radius:2px;margin-bottom:7px;transition:all 0.2s}
+.btn:active{background:#1a0000}
+.btn.on{border-color:#c0392b;color:#c0392b;animation:glow 1.5s infinite}
+@keyframes glow{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px rgba(192,57,43,0.25)}}
+.btn.rec{border-color:rgba(255,50,50,0.25);color:rgba(255,100,100,0.6);font-size:0.6rem}
+.btn.rec.on{border-color:#ff4444;color:#ff4444}
+.slbl{font-size:0.48rem;letter-spacing:0.14em;color:#444;text-transform:uppercase;margin-bottom:6px}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px}
+.fb{padding:7px 2px;background:#050505;border:1px solid #1a0000;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:0.05em;text-align:center;cursor:pointer;border-radius:2px;text-transform:uppercase;transition:all 0.2s}
+.fb.on{background:#1a0000;border-color:#c0392b;color:#d4c5a9}
+.rec-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#recInd{font-size:0.52rem;color:#ff4444;opacity:0;transition:opacity 0.3s}
+#recInd.on{opacity:1;animation:blink 0.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.1}}
+.caplist{background:#050505;border:1px solid #1a0000;border-radius:2px;min-height:65px;padding:8px;font-size:0.52rem;color:#333}
+.capitem{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a0000;color:#777}
+.capitem:last-child{border-bottom:none}
+.playbtn{padding:3px 7px;background:#1a0000;border:1px solid #3a0000;color:#c0392b;font-family:'Share Tech Mono',monospace;font-size:0.48rem;cursor:pointer;border-radius:1px}
+.ph-box{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:10px;margin-bottom:10px}
+#phonC{width:100%;height:80px;display:block;border-radius:2px;background:#000;margin-bottom:8px}
+#phStatus{font-size:0.5rem;color:#444;letter-spacing:0.1em;text-align:center}
+.ph-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.phst{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:7px;text-align:center}
+.phst-l{font-size:0.44rem;letter-spacing:0.09em;color:#333;text-transform:uppercase;margin-bottom:3px}
+.phst-v{font-size:0.8rem;color:#888}
+.ph-desc{font-size:0.48rem;color:#333;line-height:1.7;letter-spacing:0.05em;border:1px solid #1a0000;padding:8px;border-radius:2px;margin-bottom:8px}
+.ph-log{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:7px;min-height:45px;max-height:80px;overflow-y:auto;font-size:0.48rem;color:#444;margin-bottom:8px;scrollbar-width:none}
+.logbox{margin:8px 16px 0;background:#050505;border:1px solid #1a0000;border-radius:2px;padding:7px;height:56px;overflow-y:auto;scrollbar-width:none}
+.ll{font-size:0.48rem;letter-spacing:0.06em;color:#333;padding:1px 0;line-height:1.5}
+.ll.ev{color:rgba(192,57,43,0.65)}
+.ll.dt{color:rgba(0,229,255,0.5)}
+
+/* ── LIBRARY ── */
+.lib-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.lib-count{font-size:0.48rem;color:#444;letter-spacing:0.1em}
+.lib-clear{padding:4px 8px;background:transparent;border:1px solid #2a0000;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.48rem;letter-spacing:0.08em;cursor:pointer;border-radius:2px}
+.lib-filters{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.lf{padding:5px 8px;background:#050505;border:1px solid #1a0000;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.48rem;letter-spacing:0.07em;cursor:pointer;border-radius:2px;text-transform:uppercase;transition:all 0.2s}
+.lf.on{background:#1a0000;border-color:#c0392b;color:#d4c5a9}
+.lib-empty{text-align:center;padding:28px;font-size:0.55rem;color:#2a2a2a;letter-spacing:0.08em;border:1px dashed #1a0000;border-radius:2px;line-height:2}
+.lib-item{background:#050505;border:1px solid #1a0000;border-radius:2px;margin-bottom:7px;overflow:hidden}
+.lib-item-head{display:flex;align-items:center;gap:7px;padding:8px 10px}
+.lib-badge{font-size:0.44rem;letter-spacing:0.1em;padding:2px 5px;border-radius:1px;text-transform:uppercase;white-space:nowrap}
+.badge-sb{background:rgba(0,80,120,0.4);color:#00e5ff;border:1px solid rgba(0,229,255,0.2)}
+.badge-evp{background:rgba(80,0,0,0.4);color:#ff6666;border:1px solid rgba(255,50,50,0.2)}
+.badge-ph{background:rgba(0,60,0,0.4);color:#00ff88;border:1px solid rgba(0,255,136,0.2)}
+.lib-name{flex:1;font-size:0.55rem;color:#888;letter-spacing:0.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-time{font-size:0.46rem;color:#333;white-space:nowrap}
+.lib-item-body{padding:0 10px 10px}
+.lib-audio{width:100%;height:28px;margin-bottom:7px;filter:invert(1) hue-rotate(120deg) brightness(0.6);border-radius:2px}
+.lib-actions{display:flex;gap:5px}
+.lbtn{flex:1;padding:6px 3px;background:transparent;border:1px solid #2a0000;color:#666;font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:0.07em;text-align:center;cursor:pointer;border-radius:2px;text-transform:uppercase;transition:all 0.2s}
+.lbtn:active{background:#1a0000}
+.lbtn.dl{color:rgba(0,255,136,0.6);border-color:rgba(0,255,136,0.2)}
+.lbtn.del{color:rgba(255,80,80,0.4);border-color:rgba(255,80,80,0.15)}
+.ch-cell{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:5px 4px;font-size:0.44rem;letter-spacing:0.05em;color:#444;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:all 0.3s}
+.ch-cell.active{border-color:#00e5ff;color:rgba(0,229,255,0.8);background:rgba(0,229,255,0.05)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div class="logo">WRAITH</div>
+  <div class="tagline">Spirit Voice Receiver · No AI · Pure Frequency</div>
+</div>
+
+<div class="viz">
+  <canvas id="waveC" width="760" height="120"></canvas>
+  <canvas id="specC" width="760" height="72"></canvas>
+</div>
+
+<div class="emf-row">
+  <label>EMF</label>
+  <div class="emf-bar"><div class="emf-fill" id="emfFill"></div></div>
+  <span id="emfVal">0.0</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('sb',this)">SPIRIT BOX</button>
+  <button class="tab" onclick="showTab('evp',this)">EVP</button>
+  <button class="tab" onclick="showTab('ph',this)">PHONEME</button>
+  <button class="tab" onclick="showTab('lib',this)" style="color:rgba(255,215,0,0.5)">📁 LIB</button>
+</div>
+
+<!-- SPIRIT BOX -->
+<div class="panel active" id="panel-sb">
+  <div class="freq-box">
+    <div id="freqNum">87.5</div>
+    <div id="freqLbl">FM · READY</div>
+  </div>
+  <div class="info-line"><span id="sbInfo">Tap Initiate Scan to sweep live radio</span></div>
+
+  <!-- Multi-channel display -->
+  <div class="slbl">Active Channels</div>
+  <div id="chDisplay" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">
+    <div class="ch-cell" id="ch0">—</div>
+    <div class="ch-cell" id="ch1">—</div>
+    <div class="ch-cell" id="ch2">—</div>
+  </div>
+
+  <div class="cg2">
+    <div class="cg">
+      <label>Speed</label>
+      <input type="range" id="sbSpd" min="100" max="2000" value="500" step="100" oninput="sbSpd=+this.value;document.getElementById('sbSpdV').textContent=this.value+'ms';if(sbOn){clearTimeout(sbT);sbT=setTimeout(nextSt,sbSpd)}">
+      <span id="sbSpdV">500ms</span>
+    </div>
+    <div class="cg">
+      <label>Volume</label>
+      <input type="range" id="sbVolR" min="0" max="100" value="80" oninput="document.getElementById('sbVolV').textContent=this.value+'%';updateSBVol()">
+      <span id="sbVolV">80%</span>
+    </div>
+    <div class="cg">
+      <label>Channels</label>
+      <input type="range" id="sbChs" min="1" max="6" value="1" step="1" oninput="sbChannels=+this.value;document.getElementById('sbChsV').textContent=this.value;updateChannelDisplay()">
+      <span id="sbChsV">1</span>
+    </div>
+    <div class="cg">
+      <label>Echo</label>
+      <input type="range" id="sbEcho" min="0" max="100" value="0" oninput="document.getElementById('sbEchoV').textContent=this.value+'%';updateFX()">
+      <span id="sbEchoV">0%</span>
+    </div>
+    <div class="cg">
+      <label>Reverb</label>
+      <input type="range" id="sbReverb" min="0" max="100" value="0" oninput="document.getElementById('sbReverbV').textContent=this.value+'%';updateFX()">
+      <span id="sbReverbV">0%</span>
+    </div>
+    <div class="cg">
+      <label>Ghost Hz</label>
+      <input type="range" id="sbGhostHz" min="0" max="100" value="0" oninput="document.getElementById('sbGhostHzV').textContent=this.value+'%';updateFX()">
+      <span id="sbGhostHzV">0%</span>
+    </div>
+  </div>
+
+  <button class="btn" id="sbBtn" onclick="toggleSB()">▶ INITIATE SCAN</button>
+  <button class="btn" onclick="sbRevDir()" style="font-size:0.6rem">↩ REVERSE DIRECTION</button>
+  <button class="btn rec" id="sbRecBtn" onclick="toggleRec('sb','sbRecBtn')">⬤ RECORD SESSION</button>
+</div>
+
+<!-- EVP -->
+<div class="panel" id="panel-evp">
+  <div class="slbl">Audio Filter</div>
+  <div class="fg" id="filterBtns">
+    <button class="fb on" onclick="setFilt(this,'raw')">Raw</button>
+    <button class="fb" onclick="setFilt(this,'bandpass')">Band-Pass</button>
+    <button class="fb" onclick="setFilt(this,'lowpass')">Low-Pass</button>
+    <button class="fb" onclick="setFilt(this,'highpass')">High-Pass</button>
+    <button class="fb" onclick="setFilt(this,'notch')">Notch 60Hz</button>
+    <button class="fb" onclick="setFilt(this,'boost')">Voice Boost</button>
+  </div>
+  <div class="cg2">
+    <div class="cg">
+      <label>Freq</label>
+      <input type="range" id="efHz" min="100" max="5000" value="800" step="100" oninput="document.getElementById('efHzV').textContent=this.value+'Hz'">
+      <span id="efHzV">800Hz</span>
+    </div>
+    <div class="cg">
+      <label>Gain</label>
+      <input type="range" id="efGain" min="1" max="20" value="4" oninput="document.getElementById('efGainV').textContent=this.value+'x'">
+      <span id="efGainV">4x</span>
+    </div>
+  </div>
+  <div class="rec-row">
+    <button class="btn" id="evpBtn" onclick="toggleEVP()" style="margin:0;flex:1">⬤ RECORD EVP</button>
+    <span id="recInd">● REC</span>
+  </div>
+  <div class="slbl">Captures</div>
+  <div class="caplist" id="capList">No captures yet...</div>
+
+  <!-- Trim editor (shown when a capture is selected) -->
+  <div id="trimEditor" style="display:none;margin-top:8px;background:#050505;border:1px solid #2a0000;border-radius:2px;padding:10px">
+    <div class="slbl" style="margin-bottom:6px">✂ TRIM: <span id="trimName"></span></div>
+    <audio id="trimAudio" controls style="width:100%;height:28px;margin-bottom:8px;filter:invert(1) hue-rotate(120deg) brightness(0.6)"></audio>
+    <div class="cg2" style="margin-bottom:8px">
+      <div class="cg">
+        <label>Start (s)</label>
+        <input type="range" id="trimStart" min="0" max="60" value="0" step="0.1" oninput="document.getElementById('trimStartV').textContent=parseFloat(this.value).toFixed(1)+'s'">
+        <span id="trimStartV">0.0s</span>
+      </div>
+      <div class="cg">
+        <label>End (s)</label>
+        <input type="range" id="trimEnd" min="0" max="60" value="60" step="0.1" oninput="document.getElementById('trimEndV').textContent=parseFloat(this.value).toFixed(1)+'s'">
+        <span id="trimEndV">60.0s</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn" onclick="previewTrim()" style="margin:0;flex:1;font-size:0.58rem;padding:9px">▶ PREVIEW</button>
+      <button class="btn" onclick="saveTrim()" style="margin:0;flex:1;font-size:0.58rem;padding:9px;border-color:rgba(0,255,136,0.3);color:rgba(0,255,136,0.7)">✓ SAVE TRIM</button>
+      <button class="btn" onclick="closeTrim()" style="margin:0;flex:1;font-size:0.58rem;padding:9px;border-color:rgba(255,80,80,0.2);color:rgba(255,80,80,0.5)">✕ CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- PHONEME -->
+<div class="panel" id="panel-ph">
+  <div class="ph-box">
+    <canvas id="phonC" width="400" height="160"></canvas>
+    <div id="phStatus">Awaiting signal...</div>
+  </div>
+  <div class="ph-stats">
+    <div class="phst"><div class="phst-l">F1 Vowel</div><div class="phst-v" id="phF1">—</div></div>
+    <div class="phst"><div class="phst-l">F2 Color</div><div class="phst-v" id="phF2">—</div></div>
+    <div class="phst"><div class="phst-l">Level</div><div class="phst-v" id="phLvl">0</div></div>
+  </div>
+  <div class="cg2">
+    <div class="cg">
+      <label>Sensitivity</label>
+      <input type="range" id="phSensR" min="1" max="10" value="5" oninput="phSens=+this.value;document.getElementById('phSensV').textContent=this.value">
+      <span id="phSensV">5</span>
+    </div>
+    <div class="cg">
+      <label>Pitch</label>
+      <input type="range" id="phPitchR" min="60" max="300" value="120" oninput="phPitch=+this.value;document.getElementById('phPitchV').textContent=this.value+'Hz';if(phOsc)phOsc.frequency.setTargetAtTime(phPitch,AC.currentTime,0.05)">
+      <span id="phPitchV">120Hz</span>
+    </div>
+  </div>
+  <div class="ph-desc">No words. No AI. Your microphone frequencies directly drive a vocal tract synthesizer in real time. F1 filter shapes vowel openness. F2 shapes vowel color. High-band energy adds consonant noise. Nothing is pre-stored.</div>
+  <div class="ph-log" id="phLog">Signal log...</div>
+  <button class="btn" id="phBtn" onclick="togglePh()">▶ ACTIVATE PHONEME SYNTHESIZER</button>
+  <button class="btn rec" id="phRecBtn" onclick="toggleRec('ph','phRecBtn')">⬤ RECORD SESSION</button>
+</div>
+
+<!-- LIBRARY -->
+<div class="panel" id="panel-lib">
+  <div class="lib-header">
+    <div class="lib-count" id="libCount">0 recordings</div>
+    <button class="lib-clear" onclick="clearLib()">✕ CLEAR ALL</button>
+  </div>
+  <div class="lib-filters">
+    <button class="lf on" onclick="setLibFilter(this,'all')">ALL</button>
+    <button class="lf" onclick="setLibFilter(this,'sb')">SPIRIT BOX</button>
+    <button class="lf" onclick="setLibFilter(this,'evp')">EVP</button>
+    <button class="lf" onclick="setLibFilter(this,'ph')">PHONEME</button>
+  </div>
+  <div id="libList"><div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div></div>
+</div>
+
+<div class="logbox" id="sysLog">
+  <div class="ll">[ WRAITH ] Ready — no AI — pure frequency</div>
+</div>
+
+</div>
+<script>
+// ── State
+let AC=null,mic=null,AN=null;
+let sbOn=false,sbAud=null,sbT=null,sbIdx=0,sbDir=1,sbSpd=500;
+let evpOn=false,evpRec=null,evpChunks=[],evpFilt='raw',evpCaps=[];
+let phOn=false,phTmr=null,phOsc=null,phNoise=null;
+let phF1n=null,phF2n=null,phNF=null,phGn=null,phNG=null;
+let phSens=5,phPitch=120,phLogs=[];
+let recSt={},emfV=0;
+let vizPh=0;
+
+// ── Streams (20 reliable)
+const ST=[
+  {n:'SomaFM Drone Zone',u:'https://ice2.somafm.com/dronezone-128-mp3'},
+  {n:'SomaFM Deep Space',u:'https://ice2.somafm.com/deepspaceone-128-mp3'},
+  {n:'SomaFM Space Stn',u:'https://ice2.somafm.com/spacestation-128-mp3'},
+  {n:'SomaFM Dark Zone',u:'https://ice2.somafm.com/darkzone-128-mp3'},
+  {n:'SomaFM Groove',u:'https://ice2.somafm.com/groovesalad-128-mp3'},
+  {n:'SomaFM Lush',u:'https://ice2.somafm.com/lush-128-mp3'},
+  {n:'SomaFM Digitalis',u:'https://ice2.somafm.com/digitalis-128-mp3'},
+  {n:'SomaFM Illinois',u:'https://ice2.somafm.com/illinois-128-mp3'},
+  {n:'SomaFM Indie Pop',u:'https://ice2.somafm.com/indiepop-128-mp3'},
+  {n:'SomaFM Folk Fwd',u:'https://ice2.somafm.com/folkfwd-128-mp3'},
+  {n:'NPR News',u:'https://npr-ice.streamguys1.com/live.mp3'},
+  {n:'BBC World Svc',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'},
+  {n:'WNYC 93.9 FM',u:'https://wnyc-fm939-ice.streamguys1.com/wnyc-fm939-public.aac'},
+  {n:'KEXP Seattle',u:'https://live-aacplus-64.kexp.org/kexp64.aac'},
+  {n:'KCRW LA',u:'https://kcrw.streamguys1.com/kcrw_192k_mp3_e24'},
+  {n:'Radio Paradise',u:'https://stream.radioparadise.com/mp3-192'},
+  {n:'WBEZ Chicago',u:'https://stream.wbez.org/wbez128.mp3'},
+  {n:'Classic FM',u:'https://media-ice.musicradio.com/ClassicFMMP3'},
+  {n:'KQED SF',u:'https://streams.kqed.org/kqedradio'},
+  {n:'SomaFM Covers',u:'https://ice2.somafm.com/covers-128-mp3'},
+];
+
+// ── Log
+function lg(m,t){
+  const b=document.getElementById('sysLog');
+  const d=document.createElement('div');
+  d.className='ll'+(t?' '+t:'');
+  d.textContent=m;b.appendChild(d);b.scrollTop=b.scrollHeight;
+}
+
+// ── Tabs
+function showTab(n,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Audio Init
+async function initAudio(){
+  if(AC)return true;
+  try{
+    AC=new(window.AudioContext||window.webkitAudioContext)();
+    const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    mic=s;
+    const src=AC.createMediaStreamSource(s);
+    AN=AC.createAnalyser();AN.fftSize=2048;AN.smoothingTimeConstant=0.8;
+    src.connect(AN);
+    lg('[ MIC ] Connected','dt');
+    return true;
+  }catch(e){lg('[ MIC ] Denied — sim mode','ev');return false;}
+}
+
+// ── Viz
+const wC=document.getElementById('waveC'),wX=wC.getContext('2d');
+const sC=document.getElementById('specC'),sX=sC.getContext('2d');
+(function vz(){
+  requestAnimationFrame(vz);vizPh+=0.025;
+  const W=wC.width,H=wC.height,SW=sC.width,SH=sC.height;
+  const bL=AN?AN.frequencyBinCount:1024;
+  const wD=new Uint8Array(bL),fD=new Uint8Array(bL);
+  wX.fillStyle='rgba(0,0,0,0.3)';wX.fillRect(0,0,W,H);
+  if(AN)AN.getByteTimeDomainData(wD);
+  else for(let i=0;i<bL;i++)wD[i]=128+Math.sin(i*0.04+vizPh)*4+(Math.random()-0.5)*2;
+  wX.strokeStyle=sbOn?'rgba(0,229,255,0.7)':'rgba(192,57,43,0.55)';
+  wX.lineWidth=1.5;wX.beginPath();
+  const sw=W/bL;let x=0;
+  for(let i=0;i<bL;i++){const y=(wD[i]/128)*H/2;i?wX.lineTo(x,y):wX.moveTo(x,y);x+=sw;}
+  wX.stroke();
+  sX.fillStyle='rgba(0,0,0,0.3)';sX.fillRect(0,0,SW,SH);
+  if(AN)AN.getByteFrequencyData(fD);
+  else for(let i=0;i<bL;i++)fD[i]=Math.max(0,Math.exp(-i/300)*55*(0.5+0.5*Math.sin(i*0.1+vizPh))+Math.random()*7);
+  const bw=SW/64;
+  for(let i=0;i<64;i++){const v=fD[Math.floor(i*bL/64)]/255,bh=v*SH;sX.fillStyle=sbOn?`hsl(${180+i*2},100%,${18+v*38}%)`:`hsl(${i*3},68%,${14+v*33}%)`;sX.fillRect(i*bw,SH-bh,bw-1,bh);}
+})();
+
+// ── EMF
+setInterval(()=>{
+  const act=sbOn||evpOn||phOn;
+  const t=act?Math.random()*60+(Math.random()>0.9?80:0):Math.random()*7;
+  emfV+=(t-emfV)*0.2;const p=Math.min(100,emfV);
+  const f=document.getElementById('emfFill');
+  f.style.width=p+'%';
+  f.style.background=p>70?'linear-gradient(90deg,#ff4444,#ff0000)':p>40?'linear-gradient(90deg,#ffaa00,#ff6600)':'linear-gradient(90deg,#00ff88,#00e5ff)';
+  document.getElementById('emfVal').textContent=emfV.toFixed(1);
+  document.getElementById('emfVal').style.color=p>70?'#ff4444':p>40?'#ffaa00':'#00ff88';
+},400);
+
+// ── Spirit Box — Multi-channel + FX
+let sbChannels=1;
+let sbAuds=[];
+let sbNoiseNode=null, sbNoiseFilter=null, sbNoiseGainNode=null;
+let sbDelayNode=null, sbDelayGain=null, sbReverbNode=null, sbReverbGain=null;
+let sbGhostOsc=null, sbGhostGain=null;
+let sbFXBuilt=false;
+
+function buildFX(){
+  if(!AC||sbFXBuilt)return;
+  // Echo: delay node
+  sbDelayNode=AC.createDelay(2.0);
+  sbDelayNode.delayTime.value=0.3;
+  sbDelayGain=AC.createGain();
+  sbDelayGain.gain.value=0;
+  sbDelayNode.connect(sbDelayGain);
+  sbDelayGain.connect(AC.destination);
+  // Reverb: convolver with generated impulse
+  sbReverbNode=AC.createConvolver();
+  const len=AC.sampleRate*1.5;
+  const buf=AC.createBuffer(2,len,AC.sampleRate);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);}
+  sbReverbNode.buffer=buf;
+  sbReverbGain=AC.createGain();
+  sbReverbGain.gain.value=0;
+  sbReverbNode.connect(sbReverbGain);
+  sbReverbGain.connect(AC.destination);
+  // Ghost frequency tone (18.98Hz infrasound)
+  sbGhostOsc=AC.createOscillator();
+  sbGhostOsc.type='sine';
+  sbGhostOsc.frequency.value=18.98;
+  sbGhostGain=AC.createGain();
+  sbGhostGain.gain.value=0;
+  sbGhostOsc.connect(sbGhostGain);
+  sbGhostGain.connect(AC.destination);
+  sbGhostOsc.start();
+  sbFXBuilt=true;
+}
+
+function updateFX(){
+  if(!sbFXBuilt)return;
+  const echo=document.getElementById('sbEcho').value/100;
+  const reverb=document.getElementById('sbReverb').value/100;
+  const ghost=document.getElementById('sbGhostHz').value/100;
+  sbDelayGain.gain.setTargetAtTime(echo*0.6,AC.currentTime,0.1);
+  sbReverbGain.gain.setTargetAtTime(reverb*0.5,AC.currentTime,0.1);
+  sbGhostGain.gain.setTargetAtTime(ghost*0.15,AC.currentTime,0.1);
+}
+
+function updateSBVol(){
+  const v=document.getElementById('sbVolR').value/100;
+  sbAuds.forEach(a=>{if(a)a.volume=v;});
+}
+
+function updateChannelDisplay(){
+  const chs=sbChannels;
+  const grid=document.getElementById('chDisplay');
+  grid.style.gridTemplateColumns=`repeat(${Math.min(chs,3)},1fr)`;
+  for(let i=0;i<6;i++){
+    const el=document.getElementById('ch'+i);
+    if(el){el.style.display=i<chs?'block':'none';}
+  }
+}
+
+function toggleSB(){sbOn?stopSB():startSB();}
+
+async function startSB(){
+  if(!AC) await initAudio();
+  if(!AC) return;
+  sbOn=true;
+  sbSpd=+document.getElementById('sbSpd').value;
+  sbChannels=+document.getElementById('sbChs').value;
+  document.getElementById('sbBtn').textContent='■ STOP SCAN';
+  document.getElementById('sbBtn').classList.add('on');
+  document.getElementById('freqNum').classList.add('sc');
+  buildFX();
+  updateChannelDisplay();
+  lg('[ SPIRIT BOX ] White noise sweep started','ev');
+
+  // ── White noise source (continuous, always playing)
+  const noiseLen = AC.sampleRate * 2;
+  const noiseBuf = AC.createBuffer(1, noiseLen, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for(let i=0;i<noiseLen;i++) nd[i] = (Math.random()*2-1);
+  sbNoiseNode = AC.createBufferSource();
+  sbNoiseNode.buffer = noiseBuf;
+  sbNoiseNode.loop = true;
+
+  // Band-pass filter sweeps frequency — simulates tuning
+  sbNoiseFilter = AC.createBiquadFilter();
+  sbNoiseFilter.type = 'bandpass';
+  sbNoiseFilter.frequency.value = 800;
+  sbNoiseFilter.Q.value = 1.2;
+
+  sbNoiseGainNode = AC.createGain();
+  sbNoiseGainNode.gain.value = 0.35;
+
+  sbNoiseNode.connect(sbNoiseFilter);
+  sbNoiseFilter.connect(sbNoiseGainNode);
+  sbNoiseGainNode.connect(AC.destination);
+  if(sbFXBuilt){
+    sbNoiseGainNode.connect(sbDelayNode);
+    sbNoiseGainNode.connect(sbReverbNode);
+  }
+  sbNoiseNode.start();
+
+  // Start sweep loop
+  sbSweepLoop();
+}
+
+function sbSweepLoop(){
+  if(!sbOn) return;
+
+  // Advance frequency display
+  sbIdx=(sbIdx+sbDir+ST.length)%ST.length;
+  const freq=(87.5+(sbIdx/ST.length)*20.5).toFixed(1);
+  document.getElementById('freqNum').textContent=freq;
+
+  // Sweep noise filter frequency across audio spectrum
+  if(sbNoiseFilter && AC){
+    const targetHz = 200 + (sbIdx/ST.length)*3800;
+    sbNoiseFilter.frequency.setTargetAtTime(targetHz, AC.currentTime, 0.04);
+  }
+
+  // Random chance to briefly play a real radio fragment
+  const hitStation = Math.random() > 0.65;
+
+  if(hitStation){
+    const s = ST[sbIdx];
+    document.getElementById('freqLbl').textContent = s.n.toUpperCase();
+    document.getElementById('sbInfo').textContent = '▶ ' + s.n;
+
+    // Update channel cell
+    const cell = document.getElementById('ch0');
+    if(cell){cell.textContent=s.n.substring(0,14);cell.classList.add('active');setTimeout(()=>cell.classList.remove('active'),sbSpd);}
+
+    // Briefly lower noise and play radio fragment
+    if(sbNoiseGainNode && AC){
+      sbNoiseGainNode.gain.setTargetAtTime(0.08, AC.currentTime, 0.02); // fade noise down
+      setTimeout(()=>{
+        if(sbNoiseGainNode && sbOn)
+          sbNoiseGainNode.gain.setTargetAtTime(0.35, AC.currentTime+0.05, 0.03); // fade noise back
+      }, Math.min(sbSpd*0.8, 600));
+    }
+
+    // Play brief radio fragment
+    const a = new Audio();
+    a.crossOrigin = 'anonymous';
+    a.volume = document.getElementById('sbVolR').value/100;
+    a.src = s.u;
+    a.play().catch(()=>{});
+    setTimeout(()=>{ try{a.pause();}catch(e){} a.src=''; }, Math.min(sbSpd*0.8, 600));
+
+    if(Math.random()>0.7) lg('[ SB ] Fragment: '+s.n+' @ '+freq+' MHz','dt');
+  } else {
+    document.getElementById('freqLbl').textContent=freq+' MHz';
+    document.getElementById('sbInfo').textContent='— static —';
+  }
+
+  // Multi-channel: additional channels play overlapping fragments
+  for(let ch=1;ch<sbChannels;ch++){
+    if(Math.random()>0.5){
+      const chIdx=(sbIdx+(ch*5))%ST.length;
+      const ca=new Audio();
+      ca.crossOrigin='anonymous';
+      ca.volume=(document.getElementById('sbVolR').value/100)*0.4;
+      ca.src=ST[chIdx].u;
+      ca.play().catch(()=>{});
+      const chCell=document.getElementById('ch'+ch);
+      if(chCell){chCell.textContent=ST[chIdx].n.substring(0,12);chCell.classList.add('active');setTimeout(()=>chCell.classList.remove('active'),sbSpd);}
+      setTimeout(()=>{try{ca.pause();}catch(e){}ca.src='';}, Math.min(sbSpd*0.7,500));
+    }
+  }
+
+  sbT = setTimeout(sbSweepLoop, sbSpd);
+}
+
+function stopSB(){
+  sbOn=false;
+  clearTimeout(sbT);
+  // Stop white noise
+  if(sbNoiseNode){try{sbNoiseNode.stop();}catch(e){} sbNoiseNode=null;}
+  sbNoiseFilter=null; sbNoiseGainNode=null;
+  // Stop all radio audio
+  sbAuds.forEach(a=>{if(a){try{a.pause();}catch(e){}a.src='';}});
+  sbAuds=[];
+  if(sbGhostOsc&&sbGhostGain&&AC) sbGhostGain.gain.setTargetAtTime(0,AC.currentTime,0.1);
+  document.getElementById('sbBtn').textContent='▶ INITIATE SCAN';
+  document.getElementById('sbBtn').classList.remove('on');
+  document.getElementById('freqNum').classList.remove('sc');
+  document.getElementById('freqLbl').textContent='FM · READY';
+  document.getElementById('sbInfo').textContent='Tap Initiate Scan to sweep live radio';
+  for(let i=0;i<6;i++){const c=document.getElementById('ch'+i);if(c)c.textContent='—';}
+  lg('[ SPIRIT BOX ] Stopped');
+}
+function sbRevDir(){sbDir*=-1;if(sbOn){clearTimeout(sbT);sbSweepLoop();}lg('[ SB ] Reversed — '+(sbDir>0?'forward':'backward'));}
+
+// ── EVP
+function setFilt(btn,mode){document.querySelectorAll('#filterBtns .fb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');evpFilt=mode;lg('[ EVP ] Filter: '+mode);}
+async function toggleEVP(){
+  if(!AC)await initAudio();
+  if(!mic){lg('[ EVP ] No mic','ev');return;}
+  if(!evpOn){
+    evpOn=true;evpChunks=[];
+    document.getElementById('evpBtn').textContent='■ STOP RECORDING';
+    document.getElementById('evpBtn').classList.add('on');
+    document.getElementById('recInd').classList.add('on');
+    lg('[ EVP ] Recording — '+evpFilt,'ev');
+    let stream=mic;
+    if(evpFilt!=='raw'&&AC){
+      try{
+        const dest=AC.createMediaStreamDestination();
+        const src=AC.createMediaStreamSource(mic);
+        const g=AC.createGain();g.gain.value=+document.getElementById('efGain').value;
+        const f=AC.createBiquadFilter();
+        const hz=+document.getElementById('efHz').value;
+        if(evpFilt==='bandpass'){f.type='bandpass';f.frequency.value=hz;f.Q.value=2;}
+        else if(evpFilt==='lowpass'){f.type='lowpass';f.frequency.value=hz;}
+        else if(evpFilt==='highpass'){f.type='highpass';f.frequency.value=hz;}
+        else if(evpFilt==='notch'){f.type='notch';f.frequency.value=60;f.Q.value=30;}
+        else{f.type='bandpass';f.frequency.value=1500;f.Q.value=0.5;}
+        src.connect(f);f.connect(g);g.connect(dest);stream=dest.stream;
+      }catch(e){}
+    }
+    evpRec=new MediaRecorder(stream);
+    evpRec.ondataavailable=e=>evpChunks.push(e.data);
+    evpRec.onstop=()=>{
+      const blob=new Blob(evpChunks,{type:'audio/webm'});
+      const url=URL.createObjectURL(blob);
+      const ts=new Date().toLocaleTimeString();
+      const idx=evpCaps.length;
+      evpCaps.push({url,ts,blob});
+      renderCapList();
+      addToLib('evp', blob, 'EVP-'+String(evpCaps.length).padStart(3,'0'));
+      lg('[ EVP ] Saved · '+ts,'dt');
+    };
+    evpRec.start();
+  }else{
+    evpOn=false;
+    if(evpRec&&evpRec.state!=='inactive')evpRec.stop();
+    document.getElementById('evpBtn').textContent='⬤ RECORD EVP';
+    document.getElementById('evpBtn').classList.remove('on');
+    document.getElementById('recInd').classList.remove('on');
+    lg('[ EVP ] Stopped');
+  }
+}
+
+function renderCapList(){
+  const el=document.getElementById('capList');
+  if(!evpCaps.length){el.innerHTML='No captures yet...';return;}
+  el.innerHTML=evpCaps.map((c,i)=>`
+    <div class="capitem">
+      <span>EVP-${String(i+1).padStart(3,'0')} · ${c.ts}</span>
+      <div style="display:flex;gap:4px">
+        <button class="playbtn" onclick="new Audio('${c.url}').play()">▶</button>
+        <button class="playbtn" style="color:#00e5ff;border-color:rgba(0,229,255,0.3)" onclick="openTrim(${i})">✂</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Trim Editor
+let trimIdx=-1;
+function openTrim(i){
+  trimIdx=i;
+  const c=evpCaps[i];
+  const audio=document.getElementById('trimAudio');
+  audio.src=c.url;
+  audio.load();
+  document.getElementById('trimName').textContent='EVP-'+String(i+1).padStart(3,'0');
+  document.getElementById('trimStart').value=0;
+  document.getElementById('trimStartV').textContent='0.0s';
+  // Set end max when metadata loads
+  audio.onloadedmetadata=()=>{
+    const dur=Math.min(audio.duration||60,3600);
+    document.getElementById('trimEnd').max=dur;
+    document.getElementById('trimEnd').value=dur;
+    document.getElementById('trimEndV').textContent=dur.toFixed(1)+'s';
+    document.getElementById('trimStart').max=dur;
+  };
+  document.getElementById('trimEditor').style.display='block';
+  lg('[ EVP ] Trim editor opened');
+}
+function closeTrim(){
+  document.getElementById('trimEditor').style.display='none';
+  trimIdx=-1;
+}
+function previewTrim(){
+  const audio=document.getElementById('trimAudio');
+  const start=+document.getElementById('trimStart').value;
+  const end=+document.getElementById('trimEnd').value;
+  audio.currentTime=start;
+  audio.play();
+  setTimeout(()=>audio.pause(),( end-start)*1000);
+}
+async function saveTrim(){
+  if(trimIdx<0)return;
+  const start=+document.getElementById('trimStart').value;
+  const end=+document.getElementById('trimEnd').value;
+  if(!AC){await initAudio();}
+  try{
+    const resp=await fetch(evpCaps[trimIdx].url);
+    const ab=await resp.arrayBuffer();
+    const decoded=await AC.decodeAudioData(ab);
+    const startSamp=Math.floor(start*decoded.sampleRate);
+    const endSamp=Math.floor(end*decoded.sampleRate);
+    const len=endSamp-startSamp;
+    if(len<=0){lg('[ TRIM ] Invalid range','ev');return;}
+    const trimBuf=AC.createBuffer(decoded.numberOfChannels,len,decoded.sampleRate);
+    for(let ch=0;ch<decoded.numberOfChannels;ch++){
+      const orig=decoded.getChannelData(ch);
+      const dest=trimBuf.getChannelData(ch);
+      for(let i=0;i<len;i++) dest[i]=orig[startSamp+i];
+    }
+    // Render trimmed buffer to blob via OfflineAudioContext
+    const offline=new OfflineAudioContext(decoded.numberOfChannels,len,decoded.sampleRate);
+    const src2=offline.createBufferSource();
+    src2.buffer=trimBuf;
+    src2.connect(offline.destination);
+    src2.start();
+    const rendered=await offline.startRendering();
+    // Convert to WAV
+    const wavBlob=bufferToWav(rendered);
+    const url=URL.createObjectURL(wavBlob);
+    const ts=new Date().toLocaleTimeString();
+    evpCaps.push({url,ts,blob:wavBlob});
+    renderCapList();
+    addToLib('evp',wavBlob,'EVP-TRIM-'+String(evpCaps.length).padStart(3,'0'));
+    closeTrim();
+    lg('[ TRIM ] Saved — '+start.toFixed(1)+'s to '+end.toFixed(1)+'s','dt');
+  }catch(e){lg('[ TRIM ] Error: '+e.message,'ev');}
+}
+function bufferToWav(buffer){
+  const numCh=buffer.numberOfChannels,sr=buffer.sampleRate,len=buffer.length;
+  const ab=new ArrayBuffer(44+len*numCh*2);
+  const view=new DataView(ab);
+  function ws(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
+  function wu16(o,v){view.setUint16(o,v,true);}
+  function wu32(o,v){view.setUint32(o,v,true);}
+  ws(0,'RIFF');wu32(4,36+len*numCh*2);ws(8,'WAVE');ws(12,'fmt ');
+  wu32(16,16);wu16(20,1);wu16(22,numCh);wu32(24,sr);wu32(28,sr*numCh*2);
+  wu16(32,numCh*2);wu16(34,16);ws(36,'data');wu32(40,len*numCh*2);
+  let off=44;
+  for(let i=0;i<len;i++) for(let c=0;c<numCh;c++){
+    const s=Math.max(-1,Math.min(1,buffer.getChannelData(c)[i]));
+    view.setInt16(off,s<0?s*32768:s*32767,true);off+=2;
+  }
+  return new Blob([ab],{type:'audio/wav'});
+}
+
+// ── Phoneme Synthesizer
+const pC=document.getElementById('phonC'),pX=pC.getContext('2d');
+async function togglePh(){
+  if(!phOn){
+    if(!AC)await initAudio();
+    phOn=true;
+    document.getElementById('phBtn').textContent='■ DEACTIVATE SYNTHESIZER';
+    document.getElementById('phBtn').classList.add('on');
+    lg('[ PHONEME ] Vocal tract active — no words stored','ev');
+    buildVT();
+    phTmr=setInterval(driveVT,50);
+  }else{
+    phOn=false;clearInterval(phTmr);killVT();
+    document.getElementById('phBtn').textContent='▶ ACTIVATE PHONEME SYNTHESIZER';
+    document.getElementById('phBtn').classList.remove('on');
+    document.getElementById('phStatus').textContent='Awaiting signal...';
+    lg('[ PHONEME ] Offline');
+  }
+}
+function buildVT(){
+  if(!AC)return;
+  phOsc=AC.createOscillator();phOsc.type='sawtooth';phOsc.frequency.value=phPitch;
+  const nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
+  const nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  phNoise=AC.createBufferSource();phNoise.buffer=nb;phNoise.loop=true;
+  phF1n=AC.createBiquadFilter();phF1n.type='bandpass';phF1n.frequency.value=500;phF1n.Q.value=3;
+  phF2n=AC.createBiquadFilter();phF2n.type='bandpass';phF2n.frequency.value=1500;phF2n.Q.value=4;
+  phNF=AC.createBiquadFilter();phNF.type='bandpass';phNF.frequency.value=4000;phNF.Q.value=1.5;
+  phGn=AC.createGain();phGn.gain.value=0;
+  phNG=AC.createGain();phNG.gain.value=0;
+  phOsc.connect(phF1n);phF1n.connect(phF2n);phF2n.connect(phGn);phGn.connect(AC.destination);
+  phNoise.connect(phNF);phNF.connect(phNG);phNG.connect(AC.destination);
+  phOsc.start();phNoise.start();
+}
+function driveVT(){
+  if(!AN||!phOn||!AC)return;
+  const bL=AN.frequencyBinCount,fD=new Uint8Array(bL);
+  AN.getByteFrequencyData(fD);
+  const bHz=(AC.sampleRate/2)/bL,thr=(11-phSens)*8;
+  let lp=0,lHz=100,mp=0,mHz=1000,hSum=0,hCnt=0,mSum=0,mCnt=0;
+  for(let i=1;i<bL;i++){
+    const hz=i*bHz,v=fD[i];
+    if(hz<350){if(v>lp){lp=v;lHz=hz;}}
+    else if(hz<4000){mSum+=v;mCnt++;if(v>mp){mp=v;mHz=hz;}}
+    else if(hz<14000){hSum+=v;hCnt++;}
+  }
+  const mAvg=mCnt?mSum/mCnt:0,hAvg=hCnt?hSum/hCnt:0;
+  document.getElementById('phLvl').textContent=Math.round(mAvg);
+  if(mAvg<thr){phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);drawPh(0,500,1500,0);return;}
+  const f1=Math.max(250,Math.min(900,lHz*3.2));
+  const f2=Math.max(600,Math.min(2600,mHz*0.7));
+  const vAmt=Math.min(0.4,(mAvg/255)*0.6*(phSens/5));
+  const nAmt=Math.min(0.28,(hAvg/255)*0.42*(phSens/5));
+  phF1n.frequency.setTargetAtTime(f1,AC.currentTime,0.08);
+  phF2n.frequency.setTargetAtTime(f2,AC.currentTime,0.08);
+  phNF.frequency.setTargetAtTime(3000+hAvg*18,AC.currentTime,0.05);
+  phGn.gain.setTargetAtTime(vAmt,AC.currentTime,0.04);
+  phNG.gain.setTargetAtTime(nAmt,AC.currentTime,0.04);
+  document.getElementById('phF1').textContent=Math.round(f1)+'Hz';
+  document.getElementById('phF2').textContent=Math.round(f2)+'Hz';
+  document.getElementById('phStatus').textContent='F1:'+Math.round(f1)+'Hz  F2:'+Math.round(f2)+'Hz';
+  drawPh(vAmt,f1,f2,nAmt);
+  if(mAvg>thr*2&&Math.random()>0.96){
+    const e=new Date().toLocaleTimeString()+' F1:'+Math.round(f1)+' F2:'+Math.round(f2);
+    phLogs.unshift(e);if(phLogs.length>8)phLogs.pop();
+    document.getElementById('phLog').innerHTML=phLogs.map(l=>`<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
+  }
+}
+function drawPh(v,f1,f2,n){
+  const W=pC.width,H=pC.height;
+  pX.fillStyle='rgba(0,0,0,0.35)';pX.fillRect(0,0,W,H);
+  pX.fillStyle=`rgba(192,57,43,${0.25+v*2})`;pX.fillRect(0,H*0.08,(f1/900)*W,H*0.35);
+  pX.fillStyle=`rgba(0,229,255,${0.2+v*1.5})`;pX.fillRect(0,H*0.55,(f2/2600)*W,H*0.35);
+  if(n>0.02){pX.fillStyle=`rgba(212,197,169,${n*1.5})`;for(let i=0;i<30;i++)pX.fillRect(Math.random()*W,Math.random()*H,2,2);}
+  pX.fillStyle='rgba(212,197,169,0.2)';pX.font='9px monospace';
+  pX.fillText('F1 VOWEL',5,H*0.32);pX.fillText('F2 COLOR',5,H*0.79);
+}
+function killVT(){
+  if(!AC)return;
+  if(phGn)phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
+  if(phNG)phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);
+  setTimeout(()=>{try{if(phOsc)phOsc.stop();}catch(e){}try{if(phNoise)phNoise.stop();}catch(e){}phOsc=phNoise=phF1n=phF2n=phGn=phNG=phNF=null;},300);
+}
+
+// ── Library
+let library = [];
+let libFilter = 'all';
+
+function addToLib(type, blob, label) {
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toLocaleTimeString();
+  const id = Date.now();
+  const names = {sb:'Spirit Box', evp:'EVP Capture', ph:'Phoneme Session'};
+  library.unshift({id, type, url, blob, ts, label: label || names[type] || type, size: blob.size});
+  renderLib();
+  lg('[ LIB ] Saved: ' + (names[type]||type) + ' · ' + ts, 'dt');
+}
+
+function renderLib() {
+  const filtered = libFilter === 'all' ? library : library.filter(r => r.type === libFilter);
+  document.getElementById('libCount').textContent = filtered.length + ' recording' + (filtered.length !== 1 ? 's' : '');
+  const el = document.getElementById('libList');
+  if (!filtered.length) {
+    el.innerHTML = '<div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(r => `
+    <div class="lib-item" id="li-${r.id}">
+      <div class="lib-item-head">
+        <span class="lib-badge badge-${r.type}">${r.type.toUpperCase()}</span>
+        <span class="lib-name">${r.label}</span>
+        <span class="lib-time">${r.ts}</span>
+      </div>
+      <div class="lib-item-body">
+        <audio class="lib-audio" controls src="${r.url}"></audio>
+        <div class="lib-actions">
+          <button class="lbtn dl" onclick="dlRec(${r.id})">⬇ DOWNLOAD</button>
+          <button class="lbtn del" onclick="delRec(${r.id})">✕ DELETE</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function setLibFilter(btn, f) {
+  libFilter = f;
+  document.querySelectorAll('.lf').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderLib();
+}
+
+function dlRec(id) {
+  const r = library.find(x => x.id === id);
+  if (!r) return;
+  const a = document.createElement('a');
+  a.href = r.url;
+  a.download = 'WRAITH-' + r.type + '-' + r.ts.replace(/:/g, '-') + '.webm';
+  a.click();
+  lg('[ LIB ] Downloaded: ' + r.label);
+}
+
+function delRec(id) {
+  library = library.filter(x => x.id !== id);
+  renderLib();
+  lg('[ LIB ] Deleted recording');
+}
+
+function clearLib() {
+  library = [];
+  renderLib();
+  lg('[ LIB ] Library cleared');
+}
+
+// ── Recording (saves to library + optional download)
+async function toggleRec(type, btnId) {
+  const btn = document.getElementById(btnId);
+  if (recSt[type]) {
+    const {rec} = recSt[type];
+    if (rec && rec.state !== 'inactive') rec.stop();
+    delete recSt[type];
+    btn.textContent = '⬤ RECORD SESSION';
+    btn.classList.remove('on');
+  } else {
+    if (!AC) await initAudio();
+    if (!mic) { lg('[ REC ] Need mic first', 'ev'); return; }
+    const chunks = [];
+    const rec = new MediaRecorder(mic);
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunks, {type: 'audio/webm'});
+      addToLib(type, blob, null);
+    };
+    rec.start();
+    recSt[type] = {rec};
+    btn.textContent = '■ STOP & SAVE';
+    btn.classList.add('on');
+    lg('[ REC ] Recording ' + type.toUpperCase() + '...', 'ev');
+  }
+}
+
+lg('[ SYS ] Ready — tap Spirit Box to begin');
+// Init: hide channels 1-5, show only channel 0
+for(let i=1;i<6;i++){const c=document.getElementById('ch'+i);if(c)c.style.display='none';}
+</script>
+</body>
+</html>
