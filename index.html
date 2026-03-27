@@ -135,24 +135,47 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <!-- SPIRIT BOX -->
 <div class="panel active" id="panel-sb">
+
+  <!-- P-SB7 Style frequency display -->
   <div class="freq-box">
+    <!-- Band selector -->
+    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px">
+      <button id="bandFM" onclick="setBand('FM')" style="padding:5px 18px;background:#1a0000;border:1px solid #c0392b;color:#c0392b;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;cursor:pointer;border-radius:2px">FM</button>
+      <button id="bandAM" onclick="setBand('AM')" style="padding:5px 18px;background:transparent;border:1px solid #333;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;cursor:pointer;border-radius:2px">AM</button>
+    </div>
+    <!-- Frequency number -->
     <div id="freqNum">87.5</div>
     <div id="freqLbl">FM · READY</div>
+    <!-- Frequency band bar -->
+    <div style="margin-top:10px;padding:0 6px">
+      <div style="position:relative;height:6px;background:#111;border-radius:3px;border:1px solid #1a0000">
+        <div id="freqBar" style="position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#8b0000,#00e5ff);border-radius:3px;transition:width 0.15s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span id="freqMin" style="font-size:0.42rem;color:#444">87.5</span>
+        <span style="font-size:0.42rem;color:#333">MHz</span>
+        <span id="freqMax" style="font-size:0.42rem;color:#444">108.0</span>
+      </div>
+    </div>
   </div>
+
   <div class="info-line"><span id="sbInfo">Tap Initiate Scan to sweep live radio</span></div>
 
-  <!-- Multi-channel display -->
+  <!-- Channel display -->
   <div class="slbl">Active Channels</div>
-  <div id="chDisplay" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">
+  <div id="chDisplay" style="display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:10px">
     <div class="ch-cell" id="ch0">—</div>
-    <div class="ch-cell" id="ch1">—</div>
-    <div class="ch-cell" id="ch2">—</div>
+    <div class="ch-cell" id="ch1" style="display:none">—</div>
+    <div class="ch-cell" id="ch2" style="display:none">—</div>
+    <div class="ch-cell" id="ch3" style="display:none">—</div>
+    <div class="ch-cell" id="ch4" style="display:none">—</div>
+    <div class="ch-cell" id="ch5" style="display:none">—</div>
   </div>
 
   <div class="cg2">
     <div class="cg">
       <label>Speed</label>
-      <input type="range" id="sbSpd" min="100" max="2000" value="500" step="100" oninput="sbSpd=+this.value;document.getElementById('sbSpdV').textContent=this.value+'ms';if(sbOn){clearTimeout(sbT);sbT=setTimeout(nextSt,sbSpd)}">
+      <input type="range" id="sbSpd" min="100" max="2000" value="500" step="100" oninput="sbSpd=+this.value;document.getElementById('sbSpdV').textContent=this.value+'ms';if(sbOn){clearTimeout(sbT);sbT=setTimeout(sbSweepLoop,sbSpd)}">
       <span id="sbSpdV">500ms</span>
     </div>
     <div class="cg">
@@ -391,6 +414,40 @@ setInterval(()=>{
   document.getElementById('emfVal').style.color=p>70?'#ff4444':p>40?'#ffaa00':'#00ff88';
 },400);
 
+// ── Band (FM/AM)
+let sbBand='FM';
+const BAND={
+  FM:{min:87.5,max:108.0,step:0.1,unit:'MHz'},
+  AM:{min:530,max:1710,step:10,unit:'kHz'}
+};
+function setBand(b){
+  sbBand=b;
+  const bd=BAND[b];
+  document.getElementById('freqMin').textContent=bd.min;
+  document.getElementById('freqMax').textContent=bd.max;
+  document.getElementById('freqNum').textContent=bd.min.toFixed(b==='FM'?1:0);
+  document.getElementById('freqLbl').textContent=b+' · READY';
+  document.getElementById('band'+b).style.background='#1a0000';
+  document.getElementById('band'+b).style.borderColor='#c0392b';
+  document.getElementById('band'+b).style.color='#c0392b';
+  const other=b==='FM'?'AM':'FM';
+  document.getElementById('band'+other).style.background='transparent';
+  document.getElementById('band'+other).style.borderColor='#333';
+  document.getElementById('band'+other).style.color='#444';
+  sbFreqCurrent=bd.min;
+  updateFreqBar();
+  if(sbOn){stopSB();startSB();}
+}
+
+let sbFreqCurrent=87.5;
+function updateFreqBar(){
+  const bd=BAND[sbBand];
+  const pct=((sbFreqCurrent-bd.min)/(bd.max-bd.min))*100;
+  document.getElementById('freqBar').style.width=Math.max(0,Math.min(100,pct))+'%';
+  const disp=sbBand==='FM'?sbFreqCurrent.toFixed(1):Math.round(sbFreqCurrent).toString();
+  document.getElementById('freqNum').textContent=disp;
+}
+
 // ── Spirit Box — Multi-channel + FX
 let sbChannels=1;
 let sbAuds=[];
@@ -504,49 +561,48 @@ async function startSB(){
 function sbSweepLoop(){
   if(!sbOn) return;
 
-  // Advance frequency display
-  sbIdx=(sbIdx+sbDir+ST.length)%ST.length;
-  const freq=(87.5+(sbIdx/ST.length)*20.5).toFixed(1);
-  document.getElementById('freqNum').textContent=freq;
+  // Advance real FM/AM frequency
+  const bd=BAND[sbBand];
+  sbFreqCurrent+=sbDir*bd.step;
+  if(sbFreqCurrent>bd.max) sbFreqCurrent=bd.min;
+  if(sbFreqCurrent<bd.min) sbFreqCurrent=bd.max;
+  updateFreqBar();
 
-  // Sweep noise filter frequency across audio spectrum
+  // Map real freq position to stream index
+  sbIdx=Math.floor(((sbFreqCurrent-bd.min)/(bd.max-bd.min))*ST.length);
+  sbIdx=Math.max(0,Math.min(ST.length-1,sbIdx));
+
+  // Update band label
+  document.getElementById('freqLbl').textContent=sbBand+' · SCANNING';
+
+  // Sweep noise filter
   if(sbNoiseFilter && AC){
-    const targetHz = 200 + (sbIdx/ST.length)*3800;
-    sbNoiseFilter.frequency.setTargetAtTime(targetHz, AC.currentTime, 0.04);
+    const targetHz=200+((sbFreqCurrent-bd.min)/(bd.max-bd.min))*3800;
+    sbNoiseFilter.frequency.setTargetAtTime(targetHz,AC.currentTime,0.04);
   }
 
-  // Random chance to briefly play a real radio fragment
-  const hitStation = Math.random() > 0.65;
+  const hitStation=Math.random()>0.65;
+  const freqDisp=sbBand==='FM'?sbFreqCurrent.toFixed(1):Math.round(sbFreqCurrent).toString();
 
   if(hitStation){
-    const s = ST[sbIdx];
-    document.getElementById('freqLbl').textContent = s.n.toUpperCase();
-    document.getElementById('sbInfo').textContent = '▶ ' + s.n;
-
-    // Update channel cell
-    const cell = document.getElementById('ch0');
+    const s=ST[sbIdx];
+    document.getElementById('freqLbl').textContent=s.n.toUpperCase();
+    document.getElementById('sbInfo').textContent='▶ '+s.n;
+    const cell=document.getElementById('ch0');
     if(cell){cell.textContent=s.n.substring(0,14);cell.classList.add('active');setTimeout(()=>cell.classList.remove('active'),sbSpd);}
-
-    // Briefly lower noise and play radio fragment
-    if(sbNoiseGainNode && AC){
-      sbNoiseGainNode.gain.setTargetAtTime(0.08, AC.currentTime, 0.02); // fade noise down
-      setTimeout(()=>{
-        if(sbNoiseGainNode && sbOn)
-          sbNoiseGainNode.gain.setTargetAtTime(0.35, AC.currentTime+0.05, 0.03); // fade noise back
-      }, Math.min(sbSpd*0.8, 600));
+    if(sbNoiseGainNode&&AC){
+      sbNoiseGainNode.gain.setTargetAtTime(0.08,AC.currentTime,0.02);
+      setTimeout(()=>{if(sbNoiseGainNode&&sbOn)sbNoiseGainNode.gain.setTargetAtTime(0.35,AC.currentTime+0.05,0.03);},Math.min(sbSpd*0.8,600));
     }
-
-    // Play brief radio fragment
-    const a = new Audio();
-    a.crossOrigin = 'anonymous';
-    a.volume = document.getElementById('sbVolR').value/100;
-    a.src = s.u;
+    const a=new Audio();
+    a.crossOrigin='anonymous';
+    a.volume=document.getElementById('sbVolR').value/100;
+    a.src=s.u;
     a.play().catch(()=>{});
-    setTimeout(()=>{ try{a.pause();}catch(e){} a.src=''; }, Math.min(sbSpd*0.8, 600));
-
-    if(Math.random()>0.7) lg('[ SB ] Fragment: '+s.n+' @ '+freq+' MHz','dt');
+    setTimeout(()=>{try{a.pause();}catch(e){}a.src='';},Math.min(sbSpd*0.8,600));
+    if(Math.random()>0.7) lg('[ SB ] '+s.n+' @ '+freqDisp+' '+bd.unit,'dt');
   } else {
-    document.getElementById('freqLbl').textContent=freq+' MHz';
+    document.getElementById('freqLbl').textContent=sbBand+' · '+freqDisp+' '+bd.unit;
     document.getElementById('sbInfo').textContent='— static —';
   }
 
