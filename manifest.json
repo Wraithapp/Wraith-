@@ -1,4 +1,5 @@
 {
+  "id": "com.wraith.spiritvoice",
   "name": "WRAITH Spirit Voice Receiver",
   "short_name": "WRAITH",
   "description": "Frequency-based paranormal investigation app. Real radio sweep, EVP recorder, phoneme synthesizer. No AI. No word banks. Pure frequency.",
@@ -11,18 +12,13 @@
   "lang": "en-US",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/google/material-design-icons/master/png/action/settings/materialicons/24dp/1x/baseline_settings_black_24dp.png",
-      "sizes": "24x24",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
