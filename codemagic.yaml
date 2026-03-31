@@ -21,3 +21,4 @@ workflows:
     artifacts:
       - twa/app-release-unsigned.apk
       - twa/*.apk
+ 
