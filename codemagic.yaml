@@ -7,12 +7,10 @@ workflows:
     scripts:
       - name: Install dependencies
         script: npm install
-      - name: --web-dir
-        script: npm run build
       - name: Install Capacitor
         script: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init Wraith com.wraith.app --web-dir dist
+          npx cap init Wraith com.wraith.app --web-dir .
           npx cap add android
           npx cap sync
       - name: Build APK
@@ -21,4 +19,4 @@ workflows:
           ./gradlew assembleDebug
     artifacts:
       - android/app/build/outputs/apk/**/*.apk
- 
+

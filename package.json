@@ -1,0 +1,9 @@
+{
+  "name": "wraith",
+  "version": "1.0.0",
+  "description": "Wraith Paranormal App",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {}
+}
