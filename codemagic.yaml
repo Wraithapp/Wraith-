@@ -1,4 +1,4 @@
-            sed -i '' 's/targetCompatibility = [0-9.]*/targetCompatibility = JavaVersion.VERSION_21/g' "$f"
+sed -i '' 's/targetCompatibility = [0-9.]*/targetCompatibility = JavaVersion.VERSION_21/g' "$f"
             sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
             sed -i '' 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
             sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
