@@ -19,7 +19,7 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap init Wraith com.wraith.app --web-dir www
           npx cap add android
-          npx cap sync - name: Show build.gradle
+          npx cap sync - 
         script: cat android/app/build.gradle
       - name: Fix Gradle config
         script: |
