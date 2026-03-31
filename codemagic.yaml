@@ -22,7 +22,6 @@ workflows:
           npx cap sync
       - name: Fix Gradle config
         script: |
-          # Force Gradle 8.7
           cat > android/gradle/wrapper/gradle-wrapper.properties << 'PROPS'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -30,12 +29,12 @@ workflows:
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           PROPS
-          # Clear bad cache
           rm -rf /Users/builder/.gradle/caches/jars-9
-          # Patch Java source/target compatibility to 21 in all build.gradle files
-          find android -name "build.gradle" | xargs sed -i 's/JavaVersion.VERSION_[0-9_]*/JavaVersion.VERSION_21/g'
-          find android -name "build.gradle" | xargs sed -i 's/sourceCompatibility = [0-9.]*/sourceCompatibility = JavaVersion.VERSION_21/g'
-          find android -name "build.gradle" | xargs sed -i 's/targetCompatibility = [0-9.]*/targetCompatibility = JavaVersion.VERSION_21/g'
+          find android -name "build.gradle" | while read f; do
+            sed -i '' 's/JavaVersion.VERSION_[0-9_]*/JavaVersion.VERSION_21/g' "$f"
+            sed -i '' 's/sourceCompatibility = [0-9.]*/sourceCompatibility = JavaVersion.VERSION_21/g' "$f"
+            sed -i '' 's/targetCompatibility = [0-9.]*/targetCompatibility = JavaVersion.VERSION_21/g' "$f"
+          done
       - name: Build APK
         script: |
           cd android
