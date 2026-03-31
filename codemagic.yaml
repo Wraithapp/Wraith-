@@ -3,6 +3,7 @@ workflows:
     name: Wraith Android Build
     instance_type: mac_mini_m1
     environment:
+      java: 17
       node: 18
     scripts:
       - name: Install dependencies
@@ -19,10 +20,13 @@ workflows:
           npx cap init Wraith com.wraith.app --web-dir www
           npx cap add android
           npx cap sync
+      - name: Update Gradle wrapper
+        script: |
+          cd android
+          ./gradlew wrapper --gradle-version=8.7 --distribution-type=bin
       - name: Build APK
         script: |
           cd android
-          ./gradlew clean
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew clean assembleDebug --no-daemon
     artifacts:
       - android/app/build/outputs/apk/**/*.apk
