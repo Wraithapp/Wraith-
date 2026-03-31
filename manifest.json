@@ -1,0 +1,26 @@
+{
+  "name": "WRAITH",
+  "short_name": "WRAITH",
+  "description": "Organic frequency-based paranormal investigation. Real radio sweep, EVP recorder, phoneme synthesizer. No AI. No word banks.",
+  "start_url": "/Wraith-/",
+  "scope": "/Wraith-/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "id": "io.github.wraithapp.twa",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
