@@ -20,10 +20,16 @@ workflows:
           npx cap init Wraith com.wraith.app --web-dir www
           npx cap add android
           npx cap sync
-      - name: Update Gradle wrapper
+      - name: Force Gradle 8.7
         script: |
-          cd android
-          ./gradlew wrapper --gradle-version=8.7 --distribution-type=bin
+          cat > android/gradle/wrapper/gradle-wrapper.properties << 'PROPS'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          PROPS
+          rm -rf /Users/builder/.gradle/caches/jars-9
       - name: Build APK
         script: |
           cd android
