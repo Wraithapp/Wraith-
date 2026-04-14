@@ -24,11 +24,7 @@ body{background:#000;color:#d4c5a9;font-family:'Share Tech Mono',monospace;min-h
 canvas{width:100%;display:block;background:#050505;border:1px solid #1a0000;border-radius:2px}
 #waveC{height:60px;margin-bottom:4px}
 #specC{height:36px}
-.emf-row{display:flex;align-items:center;gap:8px;padding:6px 16px;background:#050000}
-.emf-row label{font-size:0.48rem;letter-spacing:0.1em;color:#444}
-.emf-bar{flex:1;height:4px;background:#111;border-radius:2px;overflow:hidden}
-.emf-fill{height:100%;width:5%;border-radius:2px;transition:width 0.3s,background 0.3s;background:linear-gradient(90deg,#00ff88,#00e5ff)}
-#emfVal{font-size:0.52rem;min-width:28px;text-align:right;color:#00ff88}
+
 .tabs{display:flex;margin:10px 16px 0;border:1px solid #2a0000;border-radius:2px;overflow:hidden}
 .tab{flex:1;padding:10px 2px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:0.07em;color:#444;background:#000;border:none;cursor:pointer;text-transform:uppercase;border-right:1px solid #1a0000;transition:background 0.2s,color 0.2s}
 .tab:last-child{border-right:none}
@@ -121,11 +117,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <canvas id="specC" width="760" height="72"></canvas>
 </div>
 
-<div class="emf-row">
-  <label>EMF</label>
-  <div class="emf-bar"><div class="emf-fill" id="emfFill"></div></div>
-  <span id="emfVal">0.0</span>
-</div>
+
 
 <div class="tabs">
   <button class="tab active" onclick="showTab('ph',this)">WRAITH</button>
@@ -340,131 +332,186 @@ let evpOn=false,evpRec=null,evpChunks=[],evpFilt='raw',evpCaps=[];
 let phOn=false,phTmr=null,phOsc=null,phOsc2=null,phMix=null,phOsc2Gain=null;
 let phF1n=null,phF2n=null,phF3n=null,phGn=null,phNG=null,phNF=null,phNoise=null;
 let phSens=5,phPitch=120,phGlide=5,phBurst=4,phLogs=[];
-let recSt={},emfV=0;
+let recSt={};
 let vizPh=0;
 
 // ── VOX syllable engine (Ovilus-style, no word banks)
 // Formant positions map to IPA vowels + consonant clusters
 // All driven by real mic frequency data — nothing pre-selected
-const VOX_VOWELS = [
-  {sym:'AH', f1:800, f2:1200},  // open back
-  {sym:'EE', f1:300, f2:2500},  // close front
-  {sym:'OO', f1:300, f2:800},   // close back
-  {sym:'EH', f1:600, f2:1900},  // mid front
-  {sym:'OH', f1:500, f2:900},   // mid back
-  {sym:'AY', f1:400, f2:2000},  // diphthong
-  {sym:'IH', f1:400, f2:2200},  // near-close front
-  {sym:'UH', f1:600, f2:1400},  // mid central
-  {sym:'AW', f1:700, f2:1000},  // open-mid back
-  {sym:'OW', f1:450, f2:1000},  // diphthong back
+// ── Pure phoneme engine — chains together like real speech
+// Spirits can form words naturally from consecutive phonemes
+// All driven by mic frequency + EMF — nothing pre-selected
+
+// Phoneme building blocks — the sounds humans use to form all words
+const VOX_PHONEMES = {
+  // Vowels
+  vowels: ['ah','eh','ee','ih','oh','oo','uh','ay','ow','oi','air','ear','oor'],
+  // Stop consonants
+  stops:  ['p','b','t','d','k','g'],
+  // Fricatives
+  fric:   ['f','v','s','z','sh','th','h'],
+  // Nasals + liquids
+  nasal:  ['m','n','ng','l','r','w','y'],
+};
+
+// All phonemes flat
+const ALL_PHONEMES = [
+  ...VOX_PHONEMES.vowels,
+  ...VOX_PHONEMES.stops,
+  ...VOX_PHONEMES.fric,
+  ...VOX_PHONEMES.nasal,
 ];
-const VOX_CONS = ['', 'H', 'N', 'M', 'L', 'R', 'S', 'V', 'W', 'Y', 'TH', 'SH'];
-const VOX_END  = ['', '', '', 'N', 'M', 'NG', 'L', 'R', 'S', 'T', 'D', 'TH'];
 
 let voxHistory = [];
-let voxCurrent = '';
 let voxSilence = 0;
 let voxBurstTmr = null;
 let voxF1Target = 500;
 let voxF2Target = 1500;
 let voxLastTrig = 0;
+let voxLastPhoneme = '';
+let voxChain = [];         // current phoneme chain being built
+let voxChainTimer = null;  // timer to reset chain after silence
 
-function mapFreqToVowel(f1, f2) {
-  // Find closest vowel by F1/F2 distance — pure physics mapping
-  let best = 0, bestDist = Infinity;
-  for(let i = 0; i < VOX_VOWELS.length; i++) {
-    const v = VOX_VOWELS[i];
-    const d = Math.abs(v.f1 - f1) * 0.5 + Math.abs(v.f2 - f2) * 0.3;
-    if(d < bestDist) { bestDist = d; best = i; }
+function getPhonemeFromEnv(f1, f2, emfLevel){
+  const f1norm = Math.max(0, Math.min(1, (f1 - 280) / 620));
+  const f2norm = Math.max(0, Math.min(1, (f2 - 700) / 1900));
+  const emfNorm = Math.max(0, Math.min(1, emfLevel / 100));
+  const timeVar = (Date.now() % 2500) / 2500;
+
+  // Force vowel-consonant alternation so words can form
+  // Even positions in chain = vowel, odd = consonant
+  const chainLen = voxChain.length;
+  const wantsVowel = (chainLen % 2 === 0) || (chainLen === 0);
+
+  let phoneme;
+  if(wantsVowel){
+    // Pick vowel based on F1/F2 position
+    const idx = Math.floor(f1norm * 7 + f2norm * 6 + timeVar * 3) % VOX_PHONEMES.vowels.length;
+    phoneme = VOX_PHONEMES.vowels[Math.abs(idx)];
+  } else {
+    // Pick consonant — type based on EMF level
+    const consonantBias = emfNorm * 0.6 + timeVar * 0.4;
+    if(consonantBias < 0.35){
+      const idx = Math.floor((f1norm + timeVar * 2) * VOX_PHONEMES.nasal.length) % VOX_PHONEMES.nasal.length;
+      phoneme = VOX_PHONEMES.nasal[Math.abs(idx)];
+    } else if(consonantBias < 0.7){
+      const idx = Math.floor((f2norm + timeVar * 2) * VOX_PHONEMES.fric.length) % VOX_PHONEMES.fric.length;
+      phoneme = VOX_PHONEMES.fric[Math.abs(idx)];
+    } else {
+      const idx = Math.floor((emfNorm + timeVar * 2) * VOX_PHONEMES.stops.length) % VOX_PHONEMES.stops.length;
+      phoneme = VOX_PHONEMES.stops[Math.abs(idx)];
+    }
   }
-  return VOX_VOWELS[best];
+  return phoneme;
 }
 
-function buildSyllable(f1, f2, hEnergy, emfLevel) {
-  const vowel = mapFreqToVowel(f1, f2);
-  // Consonant onset driven by high-freq energy band index
-  const consIdx = Math.floor((hEnergy / 255) * VOX_CONS.length) % VOX_CONS.length;
-  // Coda driven by EMF level
-  const endIdx = Math.floor((emfLevel / 100) * VOX_END.length) % VOX_END.length;
-  return VOX_CONS[consIdx] + vowel.sym + VOX_END[endIdx];
+function buildSyllable(f1, f2, hEnergy, emfLevel){
+  return getPhonemeFromEnv(f1, f2, emfLevel);
 }
 
-// ── Syllable-to-formant map — each syllable has exact F1/F2 vowel positions
-// When a syllable fires, the voice plays that exact vowel sound
-const SYL_FORMANTS = {
-  'AH': {f1:800,f2:1200}, 'EE': {f1:300,f2:2500}, 'OO': {f1:300,f2:800},
-  'EH': {f1:600,f2:1900}, 'OH': {f1:500,f2:900},  'AY': {f1:400,f2:2000},
-  'IH': {f1:400,f2:2200}, 'UH': {f1:600,f2:1400}, 'AW': {f1:700,f2:1000},
-  'OW': {f1:450,f2:1000}, 'HAH':{f1:780,f2:1100}, 'NEE':{f1:280,f2:2600},
-  'MOO':{f1:290,f2:780},  'LEH':{f1:580,f2:1950}, 'ROH':{f1:490,f2:880},
-  'SAY':{f1:390,f2:2050}, 'VOW':{f1:680,f2:1050}, 'WAY':{f1:420,f2:1950},
-  'YAH':{f1:810,f2:1150}, 'THO':{f1:460,f2:920},  'SHO':{f1:480,f2:860},
-  'HEEN':{f1:290,f2:2550},'NAAM':{f1:790,f2:1180},'LOOM':{f1:295,f2:790},
-  'REEM':{f1:285,f2:2480},'VOHN':{f1:505,f2:895}, 'WOAH':{f1:460,f2:870},
-};
-
-// ── Web Speech API voice engine
+// ── Web Speech API — demon voice settings
 let speechSynth = window.speechSynthesis;
 let voxVoice = null;
 
 function initVoice(){
   if(!speechSynth) return;
-  // Pick a voice — prefer a deeper/male voice for spookiness
   const voices = speechSynth.getVoices();
-  // Try to find English voice — prefer deeper ones
-  voxVoice = voices.find(v => v.lang.startsWith('en') && /male|david|mark|daniel|alex/i.test(v.name))
+  // Prefer deep male voice for demon effect
+  voxVoice = voices.find(v => v.lang.startsWith('en') && /male|david|mark|daniel|james|george/i.test(v.name))
+           || voices.find(v => v.lang.startsWith('en-GB')) // British tends to be deeper
            || voices.find(v => v.lang.startsWith('en'))
            || voices[0]
            || null;
 }
 
-// Load voices (they load async on some browsers)
 if(speechSynth){
   speechSynth.onvoiceschanged = initVoice;
   initVoice();
 }
 
-function speakSyllable(syl){
+function speakSyllable(phoneme){
   if(!speechSynth) return;
-  // Cancel any current speech
   speechSynth.cancel();
-
-  const utter = new SpeechSynthesisUtterance(syl.toLowerCase());
-
-  // Eerie settings — slow, low pitch, quiet
-  utter.rate = 0.4 + (phBurst * 0.04);  // very slow — ghostly
-  utter.pitch = 0.3 + (phPitch / 600);  // low pitch — deep/eerie
-  utter.volume = 0.9;
-
+  const utter = new SpeechSynthesisUtterance(phoneme);
+  // Demon voice — absolute lowest pitch, very slow, full volume
+  utter.rate = 0.3;       // very slow and drawn out
+  utter.pitch = 0.1;      // as low as possible — deep demon tone
+  utter.volume = 1.0;
   if(voxVoice) utter.voice = voxVoice;
-
   speechSynth.speak(utter);
 }
 
-function triggerVoxBurst(syl) {
+// ── Phoneme to letter/spelling map
+// Each phoneme maps to how it looks spelled in English
+const PHONEME_LETTERS = {
+  // Vowels
+  'ah':'a', 'eh':'e', 'ee':'e', 'ih':'i', 'oh':'o', 'oo':'u',
+  'uh':'u', 'ay':'a', 'ow':'ow','oi':'oi','air':'air','ear':'ear','oor':'or',
+  // Stops
+  'p':'p',  'b':'b',  't':'t',  'd':'d',  'k':'k',  'g':'g',
+  // Fricatives
+  'f':'f',  'v':'v',  's':'s',  'z':'z',  'sh':'sh','th':'th','h':'h',
+  // Nasals + liquids
+  'm':'m',  'n':'n',  'ng':'ng','l':'l',  'r':'r',  'w':'w',  'y':'y',
+};
+
+function phonemeToLetters(phoneme){
+  return PHONEME_LETTERS[phoneme] || phoneme;
+}
+
+let voxLetterChain = ''; // the spelled-out word building on screen
+
+function triggerVoxBurst(phoneme) {
   const el = document.getElementById('voxSyl');
   const prev = document.getElementById('voxPrev');
-  el.classList.remove('active');
-  setTimeout(() => {
-    el.textContent = syl;
-    el.classList.add('active');
-    // Play the voice sound for this syllable
-    speakSyllable(syl);
-    voxHistory.unshift(syl);
-    if(voxHistory.length > 12) voxHistory.pop();
-    prev.textContent = voxHistory.slice(1, 5).join('  ');
-    const ts = new Date().toLocaleTimeString();
-    phLogs.unshift(ts + ' · ' + syl);
-    if(phLogs.length > 8) phLogs.pop();
-    document.getElementById('phLog').innerHTML = phLogs.map(l =>
-      `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
-    lg('[ VOX ] ' + syl, 'dt');
-  }, 80);
-  clearTimeout(voxBurstTmr);
-  voxBurstTmr = setTimeout(() => {
+
+  // Add phoneme to chain
+  voxChain.push(phoneme);
+  voxLetterChain += phonemeToLetters(phoneme);
+
+  // Reset chain timeout — silence for 2.5s resets the word
+  clearTimeout(voxChainTimer);
+  voxChainTimer = setTimeout(() => {
+    // Save completed word to history before resetting
+    if(voxLetterChain.length > 1){
+      voxHistory.unshift(voxLetterChain.toUpperCase());
+      if(voxHistory.length > 8) voxHistory.pop();
+      prev.textContent = voxHistory.slice(0, 4).join('  ');
+    }
+    voxChain = [];
+    voxLetterChain = '';
     el.classList.remove('active');
     el.textContent = '—';
-  }, 300 + phBurst * 120);
+  }, 2500);
+
+  // Display the building word in real letters
+  el.classList.add('active');
+  el.textContent = voxLetterChain.toUpperCase();
+
+  // Speak the phoneme sound
+  speakSyllable(phoneme);
+
+  // Log to ph log
+  const ts = new Date().toLocaleTimeString();
+  phLogs.unshift(ts + ' · ' + phonemeToLetters(phoneme));
+  if(phLogs.length > 8) phLogs.pop();
+  document.getElementById('phLog').innerHTML = phLogs.map(l =>
+    `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
+  lg('[ VOX ] ' + phonemeToLetters(phoneme), 'dt');
+
+  // Auto-reset after 8 letters — long enough for most words
+  if(voxLetterChain.length >= 8){
+    clearTimeout(voxChainTimer);
+    voxHistory.unshift(voxLetterChain.toUpperCase());
+    if(voxHistory.length > 8) voxHistory.pop();
+    prev.textContent = voxHistory.slice(0, 4).join('  ');
+    voxChain = [];
+    voxLetterChain = '';
+    setTimeout(()=>{
+      el.classList.remove('active');
+      el.textContent = '—';
+    }, 1200);
+  }
 }
 
 // ── Streams
@@ -542,17 +589,7 @@ const sC=document.getElementById('specC'),sX=sC.getContext('2d');
   for(let i=0;i<64;i++){const v=fD[Math.floor(i*bL/64)]/255,bh=v*SH;sX.fillStyle=sbOn?`hsl(${180+i*2},100%,${18+v*38}%)`:`hsl(${i*3},68%,${14+v*33}%)`;sX.fillRect(i*bw,SH-bh,bw-1,bh);}
 })();
 
-// ── EMF
-setInterval(()=>{
-  const act=sbOn||evpOn||phOn;
-  const t=act?Math.random()*60+(Math.random()>0.9?80:0):Math.random()*7;
-  emfV+=(t-emfV)*0.2;const p=Math.min(100,emfV);
-  const f=document.getElementById('emfFill');
-  f.style.width=p+'%';
-  f.style.background=p>70?'linear-gradient(90deg,#ff4444,#ff0000)':p>40?'linear-gradient(90deg,#ffaa00,#ff6600)':'linear-gradient(90deg,#00ff88,#00e5ff)';
-  document.getElementById('emfVal').textContent=emfV.toFixed(1);
-  document.getElementById('emfVal').style.color=p>70?'#ff4444':p>40?'#ffaa00':'#00ff88';
-},400);
+
 
 // ── Band
 let sbBand='FM';
@@ -834,6 +871,9 @@ async function togglePh(){
     phTmr=setInterval(driveVT,50);
   }else{
     phOn=false;clearInterval(phTmr);killVT();
+    speechSynth.cancel();
+    voxChain=[];voxLetterChain='';
+    clearTimeout(voxChainTimer);
     document.getElementById('phBtn').textContent='▶ ACTIVATE VOX SYNTHESIZER';
     document.getElementById('phBtn').classList.remove('on');
     document.getElementById('phStatus').textContent='Awaiting signal...';
@@ -885,18 +925,17 @@ function driveVT(){
   document.getElementById('phStatus').textContent='F1:'+Math.round(voxF1Target)+'Hz  F2:'+Math.round(voxF2Target)+'Hz';
   drawPh(mAvg/255, voxF1Target, voxF2Target);
 
-  // Trigger syllable when threshold crossed
+  // Trigger only when frequency energy crosses threshold
   const now = Date.now();
   const thr = (11-phSens)*8;
-  const emfTrigger = emfV > 25+(10-phSens)*4;
   const energySpike = mAvg > thr*1.5;
-  const cooldown = 900 - phBurst*60;
+  const cooldown = Math.max(400, 1200-phBurst*80);
 
-  if((emfTrigger||energySpike) && now-voxLastTrig > cooldown){
+  if(energySpike && now-voxLastTrig > cooldown){
     voxLastTrig = now;
-    const syl = buildSyllable(voxF1Target, voxF2Target, 0, emfV);
-    triggerVoxBurst(syl);
-    document.getElementById('phTrig').textContent = emfTrigger?'EMF':'FREQ';
+    const phoneme = buildSyllable(voxF1Target, voxF2Target, 0, 30);
+    triggerVoxBurst(phoneme);
+    document.getElementById('phTrig').textContent = 'FREQ';
   }
 }
 
