@@ -69,6 +69,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .ph-box{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:10px;margin-bottom:10px}
 #phonC{width:100%;height:80px;display:block;border-radius:2px;background:#000;margin-bottom:8px}
 #phStatus{font-size:0.5rem;color:#444;letter-spacing:0.1em;text-align:center}
+/* VOX display */
+.vox-display{background:#000;border:1px solid #2a0000;border-radius:2px;padding:10px;margin-bottom:10px;text-align:center;min-height:52px;position:relative;overflow:hidden}
+.vox-syllable{font-family:'Cinzel',serif;font-size:2rem;color:#00ff88;text-shadow:0 0 18px #00ff88;letter-spacing:0.2em;opacity:0;transition:opacity 0.15s;text-transform:uppercase}
+.vox-syllable.active{opacity:1}
+.vox-prev{font-size:0.55rem;color:#333;letter-spacing:0.18em;margin-top:4px;min-height:16px;text-transform:uppercase}
 .ph-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
 .phst{background:#050505;border:1px solid #1a0000;border-radius:2px;padding:7px;text-align:center}
 .phst-l{font-size:0.44rem;letter-spacing:0.09em;color:#333;text-transform:uppercase;margin-bottom:3px}
@@ -79,8 +84,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .ll{font-size:0.48rem;letter-spacing:0.06em;color:#333;padding:1px 0;line-height:1.5}
 .ll.ev{color:rgba(192,57,43,0.65)}
 .ll.dt{color:rgba(0,229,255,0.5)}
-
-/* ── LIBRARY ── */
 .lib-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .lib-count{font-size:0.48rem;color:#444;letter-spacing:0.1em}
 .lib-clear{padding:4px 8px;background:transparent;border:1px solid #2a0000;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.48rem;letter-spacing:0.08em;cursor:pointer;border-radius:2px}
@@ -125,27 +128,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showTab('sb',this)">SPIRIT BOX</button>
+  <button class="tab active" onclick="showTab('ph',this)">WRAITH</button>
+  <button class="tab" onclick="showTab('sb',this)">SWEEP</button>
   <button class="tab" onclick="showTab('evp',this)">EVP</button>
-  <button class="tab" onclick="showTab('ph',this)">PHONEME</button>
   <button class="tab" onclick="showTab('lib',this)" style="color:rgba(255,215,0,0.5)">📁 LIB</button>
   <button class="tab" onclick="showTab('priv',this)" style="font-size:0.42rem;color:rgba(212,197,169,0.3)">PRIVACY</button>
 </div>
 
 <!-- SPIRIT BOX -->
-<div class="panel active" id="panel-sb">
-
-  <!-- P-SB7 Style frequency display -->
+<div class="panel" id="panel-sb">
   <div class="freq-box">
-    <!-- Band selector -->
     <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px">
       <button id="bandFM" onclick="setBand('FM')" style="padding:5px 18px;background:#1a0000;border:1px solid #c0392b;color:#c0392b;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;cursor:pointer;border-radius:2px">FM</button>
       <button id="bandAM" onclick="setBand('AM')" style="padding:5px 18px;background:transparent;border:1px solid #333;color:#444;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;cursor:pointer;border-radius:2px">AM</button>
     </div>
-    <!-- Frequency number -->
     <div id="freqNum">87.5</div>
     <div id="freqLbl">FM · READY</div>
-    <!-- Frequency band bar -->
     <div style="margin-top:10px;padding:0 6px">
       <div style="position:relative;height:6px;background:#111;border-radius:3px;border:1px solid #1a0000">
         <div id="freqBar" style="position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#8b0000,#00e5ff);border-radius:3px;transition:width 0.15s"></div>
@@ -157,9 +155,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       </div>
     </div>
   </div>
-
   <div class="info-line"><span id="sbInfo">Tap Initiate Scan to sweep live radio</span></div>
-
   <div class="cg2">
     <div class="cg">
       <label>Speed</label>
@@ -187,7 +183,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <span id="sbGhostHzV">0%</span>
     </div>
   </div>
-
   <button class="btn" id="sbBtn" onclick="toggleSB()">▶ INITIATE SCAN</button>
   <button class="btn" onclick="sbRevDir()" style="font-size:0.6rem">↩ REVERSE DIRECTION</button>
   <button class="btn rec" id="sbRecBtn" onclick="toggleRec('sb','sbRecBtn')">⬤ RECORD SESSION</button>
@@ -222,8 +217,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </div>
   <div class="slbl">Captures</div>
   <div class="caplist" id="capList">No captures yet...</div>
-
-  <!-- Trim editor (shown when a capture is selected) -->
   <div id="trimEditor" style="display:none;margin-top:8px;background:#050505;border:1px solid #2a0000;border-radius:2px;padding:10px">
     <div class="slbl" style="margin-bottom:6px">✂ TRIM: <span id="trimName"></span></div>
     <audio id="trimAudio" controls style="width:100%;height:28px;margin-bottom:8px;filter:invert(1) hue-rotate(120deg) brightness(0.6)"></audio>
@@ -247,17 +240,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </div>
 </div>
 
-<!-- PHONEME -->
-<div class="panel" id="panel-ph">
+<!-- VOX (enhanced phoneme) -->
+<div class="panel active" id="panel-ph">
+
+  <!-- Ovilus-style syllable display -->
+  <div class="vox-display">
+    <div class="vox-syllable" id="voxSyl">—</div>
+    <div class="vox-prev" id="voxPrev"></div>
+  </div>
+
   <div class="ph-box">
     <canvas id="phonC" width="400" height="160"></canvas>
     <div id="phStatus">Awaiting signal...</div>
   </div>
+
   <div class="ph-stats">
     <div class="phst"><div class="phst-l">F1 Vowel</div><div class="phst-v" id="phF1">—</div></div>
     <div class="phst"><div class="phst-l">F2 Color</div><div class="phst-v" id="phF2">—</div></div>
-    <div class="phst"><div class="phst-l">Level</div><div class="phst-v" id="phLvl">0</div></div>
+    <div class="phst"><div class="phst-l">EMF Trig</div><div class="phst-v" id="phTrig">—</div></div>
   </div>
+
   <div class="cg2">
     <div class="cg">
       <label>Sensitivity</label>
@@ -269,10 +271,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <input type="range" id="phPitchR" min="60" max="300" value="120" oninput="phPitch=+this.value;document.getElementById('phPitchV').textContent=this.value+'Hz';if(phOsc)phOsc.frequency.setTargetAtTime(phPitch,AC.currentTime,0.05)">
       <span id="phPitchV">120Hz</span>
     </div>
+    <div class="cg">
+      <label>Glide</label>
+      <input type="range" id="phGlideR" min="1" max="10" value="5" oninput="phGlide=+this.value;document.getElementById('phGlideV').textContent=this.value">
+      <span id="phGlideV">5</span>
+    </div>
+    <div class="cg">
+      <label>Burst</label>
+      <input type="range" id="phBurstR" min="1" max="10" value="4" oninput="phBurst=+this.value;document.getElementById('phBurstV').textContent=this.value">
+      <span id="phBurstV">4</span>
+    </div>
   </div>
-  <div class="ph-desc">No words. No AI. Your microphone frequencies directly drive a vocal tract synthesizer in real time. F1 filter shapes vowel openness. F2 shapes vowel color. High-band energy adds consonant noise. Nothing is pre-stored.</div>
+
+  <div class="ph-desc">No AI. No word banks. Microphone energy maps to vocal tract formants in real time. EMF spikes trigger syllable bursts — just like an Ovilus, but driven purely by your environment's frequencies. F1+F2 transitions create vowel glides. Consonant noise from high-band energy. Nothing pre-stored.</div>
   <div class="ph-log" id="phLog">Signal log...</div>
-  <button class="btn" id="phBtn" onclick="togglePh()">▶ ACTIVATE PHONEME SYNTHESIZER</button>
+  <button class="btn" id="phBtn" onclick="togglePh()">▶ ACTIVATE VOX SYNTHESIZER</button>
   <button class="btn rec" id="phRecBtn" onclick="toggleRec('ph','phRecBtn')">⬤ RECORD SESSION</button>
 </div>
 
@@ -286,7 +299,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <button class="lf on" onclick="setLibFilter(this,'all')">ALL</button>
     <button class="lf" onclick="setLibFilter(this,'sb')">SPIRIT BOX</button>
     <button class="lf" onclick="setLibFilter(this,'evp')">EVP</button>
-    <button class="lf" onclick="setLibFilter(this,'ph')">PHONEME</button>
+    <button class="lf" onclick="setLibFilter(this,'ph')">VOX</button>
   </div>
   <div id="libList"><div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div></div>
 </div>
@@ -294,32 +307,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div class="panel" id="panel-priv">
   <div style="font-size:1rem;letter-spacing:0.3em;color:#d4c5a9;text-align:center;margin-bottom:4px;font-family:'Cinzel',serif">WRAITH</div>
   <div style="font-size:0.48rem;letter-spacing:0.16em;color:#555;text-align:center;margin-bottom:18px;text-transform:uppercase">Privacy Policy · Medusa Paranormal</div>
-
   <div style="font-size:0.52rem;color:#888;line-height:1.9;letter-spacing:0.04em">
-
     <div style="color:#c0392b;font-size:0.5rem;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px">Effective Date: March 29, 2026</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">1. Information We Collect</div>
     <div style="margin-bottom:14px">WRAITH does not collect, store, transmit, or share any personal information. We do not collect your name, email, location, or device identifiers. We do not use analytics or tracking tools. We do not serve advertisements.</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">2. Microphone Access</div>
-    <div style="margin-bottom:14px">WRAITH requests microphone access solely for the EVP Recorder and Phoneme Synthesizer features. All audio is processed locally on your device only. No audio data is ever transmitted to any server or third party.</div>
-
+    <div style="margin-bottom:14px">WRAITH requests microphone access solely for the EVP Recorder and VOX Synthesizer features. All audio is processed locally on your device only. No audio data is ever transmitted to any server or third party.</div>
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">3. Audio Recordings</div>
     <div style="margin-bottom:14px">All recordings made within WRAITH are stored locally on your device using IndexedDB browser storage. These recordings never leave your device. You can play, download, or delete them at any time from the Library tab.</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">4. Internet Radio Streams</div>
     <div style="margin-bottom:14px">The Spirit Box feature streams audio from publicly available internet radio stations. Your connection to these streams is direct. WRAITH does not log or intercept this traffic.</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">5. No AI or External Processing</div>
     <div style="margin-bottom:14px">WRAITH contains no artificial intelligence. All audio analysis occurs entirely on your device in real time. Nothing is sent externally.</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">6. Children's Privacy</div>
     <div style="margin-bottom:14px">WRAITH is intended for users aged 13 and older. We do not knowingly collect information from children under 13.</div>
-
     <div style="color:#d4c5a9;margin-bottom:4px;font-size:0.54rem">7. Contact</div>
-    <div style="margin-bottom:14px">Medusa Paranormal<br>Moodinvasion@gmail.com</div>
-
+    <div style="margin-bottom:14px">Medusa Paranormal<br>medusaparanormal@gmail.com</div>
     <div style="color:#333;font-size:0.46rem;text-align:center;margin-top:20px;padding-top:14px;border-top:1px solid #1a0000">© 2026 Medusa Paranormal · WRAITH Spirit Voice Receiver</div>
   </div>
 </div>
@@ -332,15 +335,89 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <script>
 // ── State
 let AC=null,mic=null,AN=null;
-let sbOn=false,sbAud=null,sbT=null,sbIdx=0,sbDir=1,sbSpd=500;
+let sbOn=false,sbT=null,sbIdx=0,sbDir=1,sbSpd=500;
 let evpOn=false,evpRec=null,evpChunks=[],evpFilt='raw',evpCaps=[];
 let phOn=false,phTmr=null,phOsc=null,phNoise=null;
 let phF1n=null,phF2n=null,phNF=null,phGn=null,phNG=null;
-let phSens=5,phPitch=120,phLogs=[];
+let phSens=5,phPitch=120,phGlide=5,phBurst=4,phLogs=[];
 let recSt={},emfV=0;
 let vizPh=0;
 
-// ── Streams (20 reliable)
+// ── VOX syllable engine (Ovilus-style, no word banks)
+// Formant positions map to IPA vowels + consonant clusters
+// All driven by real mic frequency data — nothing pre-selected
+const VOX_VOWELS = [
+  {sym:'AH', f1:800, f2:1200},  // open back
+  {sym:'EE', f1:300, f2:2500},  // close front
+  {sym:'OO', f1:300, f2:800},   // close back
+  {sym:'EH', f1:600, f2:1900},  // mid front
+  {sym:'OH', f1:500, f2:900},   // mid back
+  {sym:'AY', f1:400, f2:2000},  // diphthong
+  {sym:'IH', f1:400, f2:2200},  // near-close front
+  {sym:'UH', f1:600, f2:1400},  // mid central
+  {sym:'AW', f1:700, f2:1000},  // open-mid back
+  {sym:'OW', f1:450, f2:1000},  // diphthong back
+];
+const VOX_CONS = ['', 'H', 'N', 'M', 'L', 'R', 'S', 'V', 'W', 'Y', 'TH', 'SH'];
+const VOX_END  = ['', '', '', 'N', 'M', 'NG', 'L', 'R', 'S', 'T', 'D', 'TH'];
+
+let voxHistory = [];
+let voxCurrent = '';
+let voxSilence = 0;
+let voxBurstTmr = null;
+let voxF1Target = 500;
+let voxF2Target = 1500;
+let voxLastTrig = 0;
+
+function mapFreqToVowel(f1, f2) {
+  // Find closest vowel by F1/F2 distance — pure physics mapping
+  let best = 0, bestDist = Infinity;
+  for(let i = 0; i < VOX_VOWELS.length; i++) {
+    const v = VOX_VOWELS[i];
+    const d = Math.abs(v.f1 - f1) * 0.5 + Math.abs(v.f2 - f2) * 0.3;
+    if(d < bestDist) { bestDist = d; best = i; }
+  }
+  return VOX_VOWELS[best];
+}
+
+function buildSyllable(f1, f2, hEnergy, emfLevel) {
+  const vowel = mapFreqToVowel(f1, f2);
+  // Consonant onset driven by high-freq energy band index
+  const consIdx = Math.floor((hEnergy / 255) * VOX_CONS.length) % VOX_CONS.length;
+  // Coda driven by EMF level
+  const endIdx = Math.floor((emfLevel / 100) * VOX_END.length) % VOX_END.length;
+  return VOX_CONS[consIdx] + vowel.sym + VOX_END[endIdx];
+}
+
+function triggerVoxBurst(syl) {
+  const el = document.getElementById('voxSyl');
+  const prev = document.getElementById('voxPrev');
+  // Fade out old
+  el.classList.remove('active');
+  setTimeout(() => {
+    el.textContent = syl;
+    el.classList.add('active');
+    // Log to history
+    voxHistory.unshift(syl);
+    if(voxHistory.length > 12) voxHistory.pop();
+    prev.textContent = voxHistory.slice(1, 5).join('  ');
+    // Update ph log
+    const ts = new Date().toLocaleTimeString();
+    phLogs.unshift(ts + ' · ' + syl);
+    if(phLogs.length > 8) phLogs.pop();
+    document.getElementById('phLog').innerHTML = phLogs.map(l =>
+      `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
+    lg('[ VOX ] ' + syl, 'dt');
+  }, 80);
+  // Auto-fade after burst duration
+  clearTimeout(voxBurstTmr);
+  voxBurstTmr = setTimeout(() => {
+    el.classList.remove('active');
+    el.textContent = '—';
+  }, 300 + phBurst * 120);
+}
+
+// ── Streams
 const ST=[
   {n:'SomaFM Drone Zone',u:'https://ice2.somafm.com/dronezone-128-mp3'},
   {n:'SomaFM Deep Space',u:'https://ice2.somafm.com/deepspaceone-128-mp3'},
@@ -364,7 +441,6 @@ const ST=[
   {n:'SomaFM Covers',u:'https://ice2.somafm.com/covers-128-mp3'},
 ];
 
-// ── Log
 function lg(m,t){
   const b=document.getElementById('sysLog');
   const d=document.createElement('div');
@@ -372,7 +448,6 @@ function lg(m,t){
   d.textContent=m;b.appendChild(d);b.scrollTop=b.scrollHeight;
 }
 
-// ── Tabs
 function showTab(n,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -380,7 +455,6 @@ function showTab(n,btn){
   btn.classList.add('active');
 }
 
-// ── Audio Init
 async function initAudio(){
   if(AC)return true;
   try{
@@ -430,12 +504,9 @@ setInterval(()=>{
   document.getElementById('emfVal').style.color=p>70?'#ff4444':p>40?'#ffaa00':'#00ff88';
 },400);
 
-// ── Band (FM/AM)
+// ── Band
 let sbBand='FM';
-const BAND={
-  FM:{min:87.5,max:108.0,step:0.1,unit:'MHz'},
-  AM:{min:530,max:1710,step:10,unit:'kHz'}
-};
+const BAND={FM:{min:87.5,max:108.0,step:0.1,unit:'MHz'},AM:{min:530,max:1710,step:10,unit:'kHz'}};
 function setBand(b){
   sbBand=b;
   const bd=BAND[b];
@@ -460,56 +531,37 @@ function updateFreqBar(){
   const bd=BAND[sbBand];
   const pct=((sbFreqCurrent-bd.min)/(bd.max-bd.min))*100;
   document.getElementById('freqBar').style.width=Math.max(0,Math.min(100,pct))+'%';
-  const disp=sbBand==='FM'?sbFreqCurrent.toFixed(1):Math.round(sbFreqCurrent).toString();
-  document.getElementById('freqNum').textContent=disp;
+  document.getElementById('freqNum').textContent=sbBand==='FM'?sbFreqCurrent.toFixed(1):Math.round(sbFreqCurrent).toString();
 }
 
-
 let sbAuds=[];
-let sbNoiseNode=null, sbNoiseFilter=null, sbNoiseGainNode=null;
-let sbDelayNode=null, sbDelayGain=null, sbReverbNode=null, sbReverbGain=null;
-let sbGhostOsc=null, sbGhostGain=null;
+let sbNoiseNode=null,sbNoiseFilter=null,sbNoiseGainNode=null;
+let sbDelayNode=null,sbDelayGain=null,sbReverbNode=null,sbReverbGain=null;
+let sbGhostOsc=null,sbGhostGain=null;
 let sbFXBuilt=false;
 
 function buildFX(){
   if(!AC||sbFXBuilt)return;
-  // Echo: delay node
-  sbDelayNode=AC.createDelay(2.0);
-  sbDelayNode.delayTime.value=0.3;
-  sbDelayGain=AC.createGain();
-  sbDelayGain.gain.value=0;
-  sbDelayNode.connect(sbDelayGain);
-  sbDelayGain.connect(AC.destination);
-  // Reverb: convolver with generated impulse
+  sbDelayNode=AC.createDelay(2.0);sbDelayNode.delayTime.value=0.3;
+  sbDelayGain=AC.createGain();sbDelayGain.gain.value=0;
+  sbDelayNode.connect(sbDelayGain);sbDelayGain.connect(AC.destination);
   sbReverbNode=AC.createConvolver();
-  const len=AC.sampleRate*1.5;
-  const buf=AC.createBuffer(2,len,AC.sampleRate);
+  const len=AC.sampleRate*1.5,buf=AC.createBuffer(2,len,AC.sampleRate);
   for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);}
   sbReverbNode.buffer=buf;
-  sbReverbGain=AC.createGain();
-  sbReverbGain.gain.value=0;
-  sbReverbNode.connect(sbReverbGain);
-  sbReverbGain.connect(AC.destination);
-  // Ghost frequency tone (18.98Hz infrasound)
-  sbGhostOsc=AC.createOscillator();
-  sbGhostOsc.type='sine';
-  sbGhostOsc.frequency.value=18.98;
-  sbGhostGain=AC.createGain();
-  sbGhostGain.gain.value=0;
-  sbGhostOsc.connect(sbGhostGain);
-  sbGhostGain.connect(AC.destination);
-  sbGhostOsc.start();
-  sbFXBuilt=true;
+  sbReverbGain=AC.createGain();sbReverbGain.gain.value=0;
+  sbReverbNode.connect(sbReverbGain);sbReverbGain.connect(AC.destination);
+  sbGhostOsc=AC.createOscillator();sbGhostOsc.type='sine';sbGhostOsc.frequency.value=18.98;
+  sbGhostGain=AC.createGain();sbGhostGain.gain.value=0;
+  sbGhostOsc.connect(sbGhostGain);sbGhostGain.connect(AC.destination);
+  sbGhostOsc.start();sbFXBuilt=true;
 }
 
 function updateFX(){
   if(!sbFXBuilt)return;
-  const echo=document.getElementById('sbEcho').value/100;
-  const reverb=document.getElementById('sbReverb').value/100;
-  const ghost=document.getElementById('sbGhostHz').value/100;
-  sbDelayGain.gain.setTargetAtTime(echo*0.6,AC.currentTime,0.1);
-  sbReverbGain.gain.setTargetAtTime(reverb*0.5,AC.currentTime,0.1);
-  sbGhostGain.gain.setTargetAtTime(ghost*0.15,AC.currentTime,0.1);
+  sbDelayGain.gain.setTargetAtTime(document.getElementById('sbEcho').value/100*0.6,AC.currentTime,0.1);
+  sbReverbGain.gain.setTargetAtTime(document.getElementById('sbReverb').value/100*0.5,AC.currentTime,0.1);
+  sbGhostGain.gain.setTargetAtTime(document.getElementById('sbGhostHz').value/100*0.15,AC.currentTime,0.1);
 }
 
 function updateSBVol(){
@@ -517,78 +569,40 @@ function updateSBVol(){
   sbAuds.forEach(a=>{if(a)a.volume=v;});
 }
 
-
 function toggleSB(){sbOn?stopSB():startSB();}
 
 async function startSB(){
-  if(!AC) await initAudio();
-  if(!AC) return;
-  sbOn=true;
-  sbSpd=+document.getElementById('sbSpd').value;
+  if(!AC)await initAudio();
+  if(!AC)return;
+  sbOn=true;sbSpd=+document.getElementById('sbSpd').value;
   document.getElementById('sbBtn').textContent='■ STOP SCAN';
   document.getElementById('sbBtn').classList.add('on');
   document.getElementById('freqNum').classList.add('sc');
-  buildFX();
-  lg('[ SPIRIT BOX ] White noise sweep started','ev');
-
-  // ── White noise source (continuous, always playing)
-  const noiseLen = AC.sampleRate * 2;
-  const noiseBuf = AC.createBuffer(1, noiseLen, AC.sampleRate);
-  const nd = noiseBuf.getChannelData(0);
-  for(let i=0;i<noiseLen;i++) nd[i] = (Math.random()*2-1);
-  sbNoiseNode = AC.createBufferSource();
-  sbNoiseNode.buffer = noiseBuf;
-  sbNoiseNode.loop = true;
-
-  // Band-pass filter sweeps frequency — simulates tuning
-  sbNoiseFilter = AC.createBiquadFilter();
-  sbNoiseFilter.type = 'bandpass';
-  sbNoiseFilter.frequency.value = 800;
-  sbNoiseFilter.Q.value = 1.2;
-
-  sbNoiseGainNode = AC.createGain();
-  sbNoiseGainNode.gain.value = 0.35;
-
-  sbNoiseNode.connect(sbNoiseFilter);
-  sbNoiseFilter.connect(sbNoiseGainNode);
-  sbNoiseGainNode.connect(AC.destination);
-  if(sbFXBuilt){
-    sbNoiseGainNode.connect(sbDelayNode);
-    sbNoiseGainNode.connect(sbReverbNode);
-  }
-  sbNoiseNode.start();
-
-  // Start sweep loop
-  sbSweepLoop();
+  buildFX();lg('[ SPIRIT BOX ] Sweep started','ev');
+  const noiseLen=AC.sampleRate*2,noiseBuf=AC.createBuffer(1,noiseLen,AC.sampleRate);
+  const nd=noiseBuf.getChannelData(0);for(let i=0;i<noiseLen;i++)nd[i]=(Math.random()*2-1);
+  sbNoiseNode=AC.createBufferSource();sbNoiseNode.buffer=noiseBuf;sbNoiseNode.loop=true;
+  sbNoiseFilter=AC.createBiquadFilter();sbNoiseFilter.type='bandpass';sbNoiseFilter.frequency.value=800;sbNoiseFilter.Q.value=1.2;
+  sbNoiseGainNode=AC.createGain();sbNoiseGainNode.gain.value=0.35;
+  sbNoiseNode.connect(sbNoiseFilter);sbNoiseFilter.connect(sbNoiseGainNode);sbNoiseGainNode.connect(AC.destination);
+  if(sbFXBuilt){sbNoiseGainNode.connect(sbDelayNode);sbNoiseGainNode.connect(sbReverbNode);}
+  sbNoiseNode.start();sbSweepLoop();
 }
 
 function sbSweepLoop(){
-  if(!sbOn) return;
-
-  // Advance real FM/AM frequency
+  if(!sbOn)return;
   const bd=BAND[sbBand];
   sbFreqCurrent+=sbDir*bd.step;
-  if(sbFreqCurrent>bd.max) sbFreqCurrent=bd.min;
-  if(sbFreqCurrent<bd.min) sbFreqCurrent=bd.max;
+  if(sbFreqCurrent>bd.max)sbFreqCurrent=bd.min;
+  if(sbFreqCurrent<bd.min)sbFreqCurrent=bd.max;
   updateFreqBar();
-
-  // Map real freq position to stream index
-  sbIdx=Math.floor(((sbFreqCurrent-bd.min)/(bd.max-bd.min))*ST.length);
-  sbIdx=Math.max(0,Math.min(ST.length-1,sbIdx));
-
-  // Update band label
+  sbIdx=Math.max(0,Math.min(ST.length-1,Math.floor(((sbFreqCurrent-bd.min)/(bd.max-bd.min))*ST.length)));
   document.getElementById('freqLbl').textContent=sbBand+' · SCANNING';
-
-  // Sweep noise filter
-  if(sbNoiseFilter && AC){
-    const targetHz=200+((sbFreqCurrent-bd.min)/(bd.max-bd.min))*3800;
-    sbNoiseFilter.frequency.setTargetAtTime(targetHz,AC.currentTime,0.04);
+  if(sbNoiseFilter&&AC){
+    sbNoiseFilter.frequency.setTargetAtTime(200+((sbFreqCurrent-bd.min)/(bd.max-bd.min))*3800,AC.currentTime,0.04);
   }
-
-  const hitStation=Math.random()>0.65;
   const freqDisp=sbBand==='FM'?sbFreqCurrent.toFixed(1):Math.round(sbFreqCurrent).toString();
-
-  if(hitStation){
+  if(Math.random()>0.65){
     const s=ST[sbIdx];
     document.getElementById('freqLbl').textContent=s.n.toUpperCase();
     document.getElementById('sbInfo').textContent='▶ '+s.n;
@@ -596,31 +610,22 @@ function sbSweepLoop(){
       sbNoiseGainNode.gain.setTargetAtTime(0.08,AC.currentTime,0.02);
       setTimeout(()=>{if(sbNoiseGainNode&&sbOn)sbNoiseGainNode.gain.setTargetAtTime(0.35,AC.currentTime+0.05,0.03);},Math.min(sbSpd*0.8,600));
     }
-    const a=new Audio();
-    a.crossOrigin='anonymous';
-    a.volume=document.getElementById('sbVolR').value/100;
-    a.src=s.u;
-    a.play().catch(()=>{});
+    const a=new Audio();a.crossOrigin='anonymous';a.volume=document.getElementById('sbVolR').value/100;a.src=s.u;a.play().catch(()=>{});
     setTimeout(()=>{try{a.pause();}catch(e){}a.src='';},Math.min(sbSpd*0.8,600));
-    if(Math.random()>0.7) lg('[ SB ] '+s.n+' @ '+freqDisp+' '+bd.unit,'dt');
+    if(Math.random()>0.7)lg('[ SB ] '+s.n+' @ '+freqDisp+' '+bd.unit,'dt');
   } else {
     document.getElementById('freqLbl').textContent=sbBand+' · '+freqDisp+' '+bd.unit;
     document.getElementById('sbInfo').textContent='— static —';
   }
-
-  sbT = setTimeout(sbSweepLoop, sbSpd);
+  sbT=setTimeout(sbSweepLoop,sbSpd);
 }
 
 function stopSB(){
-  sbOn=false;
-  clearTimeout(sbT);
-  // Stop white noise
-  if(sbNoiseNode){try{sbNoiseNode.stop();}catch(e){} sbNoiseNode=null;}
-  sbNoiseFilter=null; sbNoiseGainNode=null;
-  // Stop all radio audio
-  sbAuds.forEach(a=>{if(a){try{a.pause();}catch(e){}a.src='';}});
-  sbAuds=[];
-  if(sbGhostOsc&&sbGhostGain&&AC) sbGhostGain.gain.setTargetAtTime(0,AC.currentTime,0.1);
+  sbOn=false;clearTimeout(sbT);
+  if(sbNoiseNode){try{sbNoiseNode.stop();}catch(e){}sbNoiseNode=null;}
+  sbNoiseFilter=null;sbNoiseGainNode=null;
+  sbAuds.forEach(a=>{if(a){try{a.pause();}catch(e){}a.src='';}});sbAuds=[];
+  if(sbGhostOsc&&sbGhostGain&&AC)sbGhostGain.gain.setTargetAtTime(0,AC.currentTime,0.1);
   document.getElementById('sbBtn').textContent='▶ INITIATE SCAN';
   document.getElementById('sbBtn').classList.remove('on');
   document.getElementById('freqNum').classList.remove('sc');
@@ -663,10 +668,9 @@ async function toggleEVP(){
       const blob=new Blob(evpChunks,{type:'audio/webm'});
       const url=URL.createObjectURL(blob);
       const ts=new Date().toLocaleTimeString();
-      const idx=evpCaps.length;
       evpCaps.push({url,ts,blob});
       renderCapList();
-      addToLib('evp', blob, 'EVP-'+String(evpCaps.length).padStart(3,'0'));
+      addToLib('evp',blob,'EVP-'+String(evpCaps.length).padStart(3,'0'));
       lg('[ EVP ] Saved · '+ts,'dt');
     };
     evpRec.start();
@@ -693,18 +697,14 @@ function renderCapList(){
     </div>`).join('');
 }
 
-// ── Trim Editor
 let trimIdx=-1;
 function openTrim(i){
-  trimIdx=i;
-  const c=evpCaps[i];
+  trimIdx=i;const c=evpCaps[i];
   const audio=document.getElementById('trimAudio');
-  audio.src=c.url;
-  audio.load();
+  audio.src=c.url;audio.load();
   document.getElementById('trimName').textContent='EVP-'+String(i+1).padStart(3,'0');
   document.getElementById('trimStart').value=0;
   document.getElementById('trimStartV').textContent='0.0s';
-  // Set end max when metadata loads
   audio.onloadedmetadata=()=>{
     const dur=Math.min(audio.duration||60,3600);
     document.getElementById('trimEnd').max=dur;
@@ -713,25 +713,20 @@ function openTrim(i){
     document.getElementById('trimStart').max=dur;
   };
   document.getElementById('trimEditor').style.display='block';
-  lg('[ EVP ] Trim editor opened');
 }
-function closeTrim(){
-  document.getElementById('trimEditor').style.display='none';
-  trimIdx=-1;
-}
+function closeTrim(){document.getElementById('trimEditor').style.display='none';trimIdx=-1;}
 function previewTrim(){
   const audio=document.getElementById('trimAudio');
   const start=+document.getElementById('trimStart').value;
   const end=+document.getElementById('trimEnd').value;
-  audio.currentTime=start;
-  audio.play();
-  setTimeout(()=>audio.pause(),( end-start)*1000);
+  audio.currentTime=start;audio.play();
+  setTimeout(()=>audio.pause(),(end-start)*1000);
 }
 async function saveTrim(){
   if(trimIdx<0)return;
   const start=+document.getElementById('trimStart').value;
   const end=+document.getElementById('trimEnd').value;
-  if(!AC){await initAudio();}
+  if(!AC)await initAudio();
   try{
     const resp=await fetch(evpCaps[trimIdx].url);
     const ab=await resp.arrayBuffer();
@@ -742,65 +737,59 @@ async function saveTrim(){
     if(len<=0){lg('[ TRIM ] Invalid range','ev');return;}
     const trimBuf=AC.createBuffer(decoded.numberOfChannels,len,decoded.sampleRate);
     for(let ch=0;ch<decoded.numberOfChannels;ch++){
-      const orig=decoded.getChannelData(ch);
-      const dest=trimBuf.getChannelData(ch);
-      for(let i=0;i<len;i++) dest[i]=orig[startSamp+i];
+      const orig=decoded.getChannelData(ch);const dest=trimBuf.getChannelData(ch);
+      for(let i=0;i<len;i++)dest[i]=orig[startSamp+i];
     }
-    // Render trimmed buffer to blob via OfflineAudioContext
     const offline=new OfflineAudioContext(decoded.numberOfChannels,len,decoded.sampleRate);
-    const src2=offline.createBufferSource();
-    src2.buffer=trimBuf;
-    src2.connect(offline.destination);
-    src2.start();
+    const src2=offline.createBufferSource();src2.buffer=trimBuf;src2.connect(offline.destination);src2.start();
     const rendered=await offline.startRendering();
-    // Convert to WAV
     const wavBlob=bufferToWav(rendered);
     const url=URL.createObjectURL(wavBlob);
     const ts=new Date().toLocaleTimeString();
-    evpCaps.push({url,ts,blob:wavBlob});
-    renderCapList();
+    evpCaps.push({url,ts,blob:wavBlob});renderCapList();
     addToLib('evp',wavBlob,'EVP-TRIM-'+String(evpCaps.length).padStart(3,'0'));
-    closeTrim();
-    lg('[ TRIM ] Saved — '+start.toFixed(1)+'s to '+end.toFixed(1)+'s','dt');
+    closeTrim();lg('[ TRIM ] Saved — '+start.toFixed(1)+'s to '+end.toFixed(1)+'s','dt');
   }catch(e){lg('[ TRIM ] Error: '+e.message,'ev');}
 }
 function bufferToWav(buffer){
   const numCh=buffer.numberOfChannels,sr=buffer.sampleRate,len=buffer.length;
-  const ab=new ArrayBuffer(44+len*numCh*2);
-  const view=new DataView(ab);
+  const ab=new ArrayBuffer(44+len*numCh*2);const view=new DataView(ab);
   function ws(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
-  function wu16(o,v){view.setUint16(o,v,true);}
-  function wu32(o,v){view.setUint32(o,v,true);}
+  function wu16(o,v){view.setUint16(o,v,true);}function wu32(o,v){view.setUint32(o,v,true);}
   ws(0,'RIFF');wu32(4,36+len*numCh*2);ws(8,'WAVE');ws(12,'fmt ');
   wu32(16,16);wu16(20,1);wu16(22,numCh);wu32(24,sr);wu32(28,sr*numCh*2);
   wu16(32,numCh*2);wu16(34,16);ws(36,'data');wu32(40,len*numCh*2);
   let off=44;
-  for(let i=0;i<len;i++) for(let c=0;c<numCh;c++){
+  for(let i=0;i<len;i++)for(let c=0;c<numCh;c++){
     const s=Math.max(-1,Math.min(1,buffer.getChannelData(c)[i]));
     view.setInt16(off,s<0?s*32768:s*32767,true);off+=2;
   }
   return new Blob([ab],{type:'audio/wav'});
 }
 
-// ── Phoneme Synthesizer
+// ── VOX Synthesizer (Ovilus-style)
 const pC=document.getElementById('phonC'),pX=pC.getContext('2d');
+
 async function togglePh(){
   if(!phOn){
     if(!AC)await initAudio();
     phOn=true;
-    document.getElementById('phBtn').textContent='■ DEACTIVATE SYNTHESIZER';
+    document.getElementById('phBtn').textContent='■ DEACTIVATE VOX';
     document.getElementById('phBtn').classList.add('on');
-    lg('[ PHONEME ] Vocal tract active — no words stored','ev');
+    lg('[ VOX ] Vocal tract active — EMF-triggered syllables','ev');
     buildVT();
     phTmr=setInterval(driveVT,50);
   }else{
     phOn=false;clearInterval(phTmr);killVT();
-    document.getElementById('phBtn').textContent='▶ ACTIVATE PHONEME SYNTHESIZER';
+    document.getElementById('phBtn').textContent='▶ ACTIVATE VOX SYNTHESIZER';
     document.getElementById('phBtn').classList.remove('on');
     document.getElementById('phStatus').textContent='Awaiting signal...';
-    lg('[ PHONEME ] Offline');
+    document.getElementById('voxSyl').classList.remove('active');
+    document.getElementById('voxSyl').textContent='—';
+    lg('[ VOX ] Offline');
   }
 }
+
 function buildVT(){
   if(!AC)return;
   phOsc=AC.createOscillator();phOsc.type='sawtooth';phOsc.frequency.value=phPitch;
@@ -816,6 +805,7 @@ function buildVT(){
   phNoise.connect(phNF);phNF.connect(phNG);phNG.connect(AC.destination);
   phOsc.start();phNoise.start();
 }
+
 function driveVT(){
   if(!AN||!phOn||!AC)return;
   const bL=AN.frequencyBinCount,fD=new Uint8Array(bL);
@@ -829,36 +819,65 @@ function driveVT(){
     else if(hz<14000){hSum+=v;hCnt++;}
   }
   const mAvg=mCnt?mSum/mCnt:0,hAvg=hCnt?hSum/hCnt:0;
-  document.getElementById('phLvl').textContent=Math.round(mAvg);
-  if(mAvg<thr){phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);drawPh(0,500,1500,0);return;}
+  document.getElementById('phF1').textContent=Math.round(lHz)+'Hz';
+  document.getElementById('phF2').textContent=Math.round(mHz)+'Hz';
+
+  if(mAvg<thr){
+    phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
+    phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);
+    drawPh(0,500,1500,0);
+    voxSilence++;
+    return;
+  }
+
+  // Map mic frequencies to F1/F2 formant targets
+  const glideTime = 0.02 + (phGlide / 10) * 0.25;
   const f1=Math.max(250,Math.min(900,lHz*3.2));
   const f2=Math.max(600,Math.min(2600,mHz*0.7));
+
+  // Smooth formant gliding (Ovilus-style vowel transitions)
+  voxF1Target += (f1 - voxF1Target) * 0.15;
+  voxF2Target += (f2 - voxF2Target) * 0.15;
+
   const vAmt=Math.min(0.4,(mAvg/255)*0.6*(phSens/5));
   const nAmt=Math.min(0.28,(hAvg/255)*0.42*(phSens/5));
-  phF1n.frequency.setTargetAtTime(f1,AC.currentTime,0.08);
-  phF2n.frequency.setTargetAtTime(f2,AC.currentTime,0.08);
+
+  phF1n.frequency.setTargetAtTime(voxF1Target,AC.currentTime,glideTime);
+  phF2n.frequency.setTargetAtTime(voxF2Target,AC.currentTime,glideTime);
   phNF.frequency.setTargetAtTime(3000+hAvg*18,AC.currentTime,0.05);
   phGn.gain.setTargetAtTime(vAmt,AC.currentTime,0.04);
   phNG.gain.setTargetAtTime(nAmt,AC.currentTime,0.04);
-  document.getElementById('phF1').textContent=Math.round(f1)+'Hz';
-  document.getElementById('phF2').textContent=Math.round(f2)+'Hz';
-  document.getElementById('phStatus').textContent='F1:'+Math.round(f1)+'Hz  F2:'+Math.round(f2)+'Hz';
-  drawPh(vAmt,f1,f2,nAmt);
-  if(mAvg>thr*2&&Math.random()>0.96){
-    const e=new Date().toLocaleTimeString()+' F1:'+Math.round(f1)+' F2:'+Math.round(f2);
-    phLogs.unshift(e);if(phLogs.length>8)phLogs.pop();
-    document.getElementById('phLog').innerHTML=phLogs.map(l=>`<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
+
+  document.getElementById('phStatus').textContent='F1:'+Math.round(voxF1Target)+'Hz  F2:'+Math.round(voxF2Target)+'Hz';
+  drawPh(vAmt,voxF1Target,voxF2Target,nAmt);
+
+  // EMF-triggered syllable burst — fires when energy crosses threshold
+  // Uses EMF level + frequency data to build syllable, no pre-stored words
+  const now = Date.now();
+  const emfTrigger = emfV > 25 + (10 - phSens) * 4;
+  const energySpike = mAvg > thr * 1.8;
+  const cooldown = 800 - phBurst * 60;
+
+  if((emfTrigger || energySpike) && now - voxLastTrig > cooldown){
+    voxLastTrig = now;
+    const syl = buildSyllable(voxF1Target, voxF2Target, hAvg, emfV);
+    triggerVoxBurst(syl);
+    document.getElementById('phTrig').textContent = emfTrigger ? 'EMF' : 'FREQ';
   }
+
+  voxSilence = 0;
 }
+
 function drawPh(v,f1,f2,n){
   const W=pC.width,H=pC.height;
   pX.fillStyle='rgba(0,0,0,0.35)';pX.fillRect(0,0,W,H);
-  pX.fillStyle=`rgba(192,57,43,${0.25+v*2})`;pX.fillRect(0,H*0.08,(f1/900)*W,H*0.35);
-  pX.fillStyle=`rgba(0,229,255,${0.2+v*1.5})`;pX.fillRect(0,H*0.55,(f2/2600)*W,H*0.35);
+  pX.fillStyle=`rgba(0,255,136,${0.15+v*2})`;pX.fillRect(0,H*0.08,(f1/900)*W,H*0.35);
+  pX.fillStyle=`rgba(0,229,255,${0.15+v*1.5})`;pX.fillRect(0,H*0.55,(f2/2600)*W,H*0.35);
   if(n>0.02){pX.fillStyle=`rgba(212,197,169,${n*1.5})`;for(let i=0;i<30;i++)pX.fillRect(Math.random()*W,Math.random()*H,2,2);}
   pX.fillStyle='rgba(212,197,169,0.2)';pX.font='9px monospace';
   pX.fillText('F1 VOWEL',5,H*0.32);pX.fillText('F2 COLOR',5,H*0.79);
 }
+
 function killVT(){
   if(!AC)return;
   if(phGn)phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
@@ -867,79 +886,47 @@ function killVT(){
 }
 
 // ── Library
-let library = [];
-let libFilter = 'all';
-let db = null;
+let library=[],libFilter='all',db=null;
 
-// ── IndexedDB setup for permanent storage
 function initDB(){
   return new Promise((resolve)=>{
     const req=indexedDB.open('WraithLibrary',1);
     req.onupgradeneeded=e=>{
       const d=e.target.result;
-      if(!d.objectStoreNames.contains('recordings')){
-        d.createObjectStore('recordings',{keyPath:'id'});
-      }
+      if(!d.objectStoreNames.contains('recordings'))d.createObjectStore('recordings',{keyPath:'id'});
     };
     req.onsuccess=e=>{db=e.target.result;resolve();};
-    req.onerror=()=>resolve(); // fall back to memory if DB fails
+    req.onerror=()=>resolve();
   });
 }
-
-function saveToDb(rec){
-  if(!db)return;
-  try{
-    const tx=db.transaction('recordings','readwrite');
-    tx.objectStore('recordings').put(rec);
-  }catch(e){}
-}
-
-function deleteFromDb(id){
-  if(!db)return;
-  try{
-    const tx=db.transaction('recordings','readwrite');
-    tx.objectStore('recordings').delete(id);
-  }catch(e){}
-}
-
+function saveToDb(rec){if(!db)return;try{const tx=db.transaction('recordings','readwrite');tx.objectStore('recordings').put(rec);}catch(e){}}
+function deleteFromDb(id){if(!db)return;try{const tx=db.transaction('recordings','readwrite');tx.objectStore('recordings').delete(id);}catch(e){}}
 function loadFromDb(){
   return new Promise((resolve)=>{
     if(!db){resolve([]);return;}
-    try{
-      const tx=db.transaction('recordings','readonly');
-      const req=tx.objectStore('recordings').getAll();
-      req.onsuccess=e=>resolve(e.target.result||[]);
-      req.onerror=()=>resolve([]);
-    }catch(e){resolve([]);}
+    try{const tx=db.transaction('recordings','readonly');const req=tx.objectStore('recordings').getAll();req.onsuccess=e=>resolve(e.target.result||[]);req.onerror=()=>resolve([]);}catch(e){resolve([]);}
   });
 }
 
-async function addToLib(type, blob, label) {
-  const ts = new Date().toLocaleTimeString();
-  const id = Date.now();
-  const names = {sb:'Spirit Box', evp:'EVP Capture', ph:'Phoneme Session'};
-  // Convert blob to base64 for persistent storage
-  const reader = new FileReader();
-  reader.readAsDataURL(blob);
-  reader.onloadend = ()=>{
-    const base64 = reader.result;
-    const rec = {id, type, base64, ts, label: label || names[type] || type, size: blob.size};
-    library.unshift({...rec, url: URL.createObjectURL(blob), blob});
-    saveToDb(rec);
-    renderLib();
-    lg('[ LIB ] Saved permanently: ' + (names[type]||type) + ' · ' + ts, 'dt');
+async function addToLib(type,blob,label){
+  const ts=new Date().toLocaleTimeString(),id=Date.now();
+  const names={sb:'Spirit Box',evp:'EVP Capture',ph:'VOX Session'};
+  const reader=new FileReader();reader.readAsDataURL(blob);
+  reader.onloadend=()=>{
+    const base64=reader.result;
+    const rec={id,type,base64,ts,label:label||names[type]||type,size:blob.size};
+    library.unshift({...rec,url:URL.createObjectURL(blob),blob});
+    saveToDb(rec);renderLib();
+    lg('[ LIB ] Saved: '+(names[type]||type)+' · '+ts,'dt');
   };
 }
 
-function renderLib() {
-  const filtered = libFilter === 'all' ? library : library.filter(r => r.type === libFilter);
-  document.getElementById('libCount').textContent = filtered.length + ' recording' + (filtered.length !== 1 ? 's' : '');
-  const el = document.getElementById('libList');
-  if (!filtered.length) {
-    el.innerHTML = '<div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div>';
-    return;
-  }
-  el.innerHTML = filtered.map(r => `
+function renderLib(){
+  const filtered=libFilter==='all'?library:library.filter(r=>r.type===libFilter);
+  document.getElementById('libCount').textContent=filtered.length+' recording'+(filtered.length!==1?'s':'');
+  const el=document.getElementById('libList');
+  if(!filtered.length){el.innerHTML='<div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div>';return;}
+  el.innerHTML=filtered.map(r=>`
     <div class="lib-item" id="li-${r.id}">
       <div class="lib-item-head">
         <span class="lib-badge badge-${r.type}">${r.type.toUpperCase()}</span>
@@ -956,87 +943,31 @@ function renderLib() {
     </div>`).join('');
 }
 
-function setLibFilter(btn, f) {
-  libFilter = f;
-  document.querySelectorAll('.lf').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  renderLib();
-}
+function setLibFilter(btn,f){libFilter=f;document.querySelectorAll('.lf').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderLib();}
+function dlRec(id){const r=library.find(x=>x.id===id);if(!r)return;const a=document.createElement('a');a.href=r.url;a.download='WRAITH-'+r.type+'-'+r.ts.replace(/:/g,'-')+'.webm';a.click();lg('[ LIB ] Downloaded: '+r.label);}
+function delRec(id){library=library.filter(x=>x.id!==id);deleteFromDb(id);renderLib();lg('[ LIB ] Deleted');}
+function clearLib(){library=[];if(db){try{const tx=db.transaction('recordings','readwrite');tx.objectStore('recordings').clear();}catch(e){}}renderLib();lg('[ LIB ] Cleared');}
 
-function dlRec(id) {
-  const r = library.find(x => x.id === id);
-  if (!r) return;
-  const a = document.createElement('a');
-  a.href = r.url;
-  a.download = 'WRAITH-' + r.type + '-' + r.ts.replace(/:/g, '-') + '.webm';
-  a.click();
-  lg('[ LIB ] Downloaded: ' + r.label);
-}
-
-function delRec(id) {
-  library = library.filter(x => x.id !== id);
-  deleteFromDb(id);
-  renderLib();
-  lg('[ LIB ] Deleted recording');
-}
-
-function clearLib() {
-  library = [];
-  if(db){
-    try{
-      const tx=db.transaction('recordings','readwrite');
-      tx.objectStore('recordings').clear();
-    }catch(e){}
-  }
-  renderLib();
-  lg('[ LIB ] Library cleared');
-}
-
-// Load saved recordings from DB on startup
 async function loadLibrary(){
-  await initDB();
-  const saved = await loadFromDb();
-  // Sort newest first
+  await initDB();const saved=await loadFromDb();
   saved.sort((a,b)=>b.id-a.id);
-  for(const rec of saved){
-    // Convert base64 back to blob URL
-    try{
-      const res=await fetch(rec.base64);
-      const blob=await res.blob();
-      library.push({...rec, url:URL.createObjectURL(blob), blob});
-    }catch(e){}
-  }
-  if(library.length>0){
-    renderLib();
-    lg('[ LIB ] '+library.length+' recordings restored','dt');
-  }
+  for(const rec of saved){try{const res=await fetch(rec.base64);const blob=await res.blob();library.push({...rec,url:URL.createObjectURL(blob),blob});}catch(e){}}
+  if(library.length>0){renderLib();lg('[ LIB ] '+library.length+' recordings restored','dt');}
 }
 loadLibrary();
 
-// ── Recording (saves to library + optional download)
-async function toggleRec(type, btnId) {
-  const btn = document.getElementById(btnId);
-  if (recSt[type]) {
-    const {rec} = recSt[type];
-    if (rec && rec.state !== 'inactive') rec.stop();
-    delete recSt[type];
-    btn.textContent = '⬤ RECORD SESSION';
-    btn.classList.remove('on');
-  } else {
-    if (!AC) await initAudio();
-    if (!mic) { lg('[ REC ] Need mic first', 'ev'); return; }
-    const chunks = [];
-    const rec = new MediaRecorder(mic);
-    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    rec.onstop = () => {
-      const blob = new Blob(chunks, {type: 'audio/webm'});
-      addToLib(type, blob, null);
-    };
-    rec.start();
-    recSt[type] = {rec};
-    btn.textContent = '■ STOP & SAVE';
-    btn.classList.add('on');
-    lg('[ REC ] Recording ' + type.toUpperCase() + '...', 'ev');
+async function toggleRec(type,btnId){
+  const btn=document.getElementById(btnId);
+  if(recSt[type]){
+    const{rec}=recSt[type];if(rec&&rec.state!=='inactive')rec.stop();
+    delete recSt[type];btn.textContent='⬤ RECORD SESSION';btn.classList.remove('on');
+  }else{
+    if(!AC)await initAudio();if(!mic){lg('[ REC ] Need mic first','ev');return;}
+    const chunks=[];const rec=new MediaRecorder(mic);
+    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    rec.onstop=()=>{const blob=new Blob(chunks,{type:'audio/webm'});addToLib(type,blob,null);};
+    rec.start();recSt[type]={rec};btn.textContent='■ STOP & SAVE';btn.classList.add('on');
+    lg('[ REC ] Recording '+type.toUpperCase()+'...','ev');
   }
 }
 
