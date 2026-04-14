@@ -389,19 +389,70 @@ function buildSyllable(f1, f2, hEnergy, emfLevel) {
   return VOX_CONS[consIdx] + vowel.sym + VOX_END[endIdx];
 }
 
+// ── Syllable-to-formant map — each syllable has exact F1/F2 vowel positions
+// When a syllable fires, the voice plays that exact vowel sound
+const SYL_FORMANTS = {
+  'AH': {f1:800,f2:1200}, 'EE': {f1:300,f2:2500}, 'OO': {f1:300,f2:800},
+  'EH': {f1:600,f2:1900}, 'OH': {f1:500,f2:900},  'AY': {f1:400,f2:2000},
+  'IH': {f1:400,f2:2200}, 'UH': {f1:600,f2:1400}, 'AW': {f1:700,f2:1000},
+  'OW': {f1:450,f2:1000}, 'HAH':{f1:780,f2:1100}, 'NEE':{f1:280,f2:2600},
+  'MOO':{f1:290,f2:780},  'LEH':{f1:580,f2:1950}, 'ROH':{f1:490,f2:880},
+  'SAY':{f1:390,f2:2050}, 'VOW':{f1:680,f2:1050}, 'WAY':{f1:420,f2:1950},
+  'YAH':{f1:810,f2:1150}, 'THO':{f1:460,f2:920},  'SHO':{f1:480,f2:860},
+  'HEEN':{f1:290,f2:2550},'NAAM':{f1:790,f2:1180},'LOOM':{f1:295,f2:790},
+  'REEM':{f1:285,f2:2480},'VOHN':{f1:505,f2:895}, 'WOAH':{f1:460,f2:870},
+};
+
+// ── Web Speech API voice engine
+let speechSynth = window.speechSynthesis;
+let voxVoice = null;
+
+function initVoice(){
+  if(!speechSynth) return;
+  // Pick a voice — prefer a deeper/male voice for spookiness
+  const voices = speechSynth.getVoices();
+  // Try to find English voice — prefer deeper ones
+  voxVoice = voices.find(v => v.lang.startsWith('en') && /male|david|mark|daniel|alex/i.test(v.name))
+           || voices.find(v => v.lang.startsWith('en'))
+           || voices[0]
+           || null;
+}
+
+// Load voices (they load async on some browsers)
+if(speechSynth){
+  speechSynth.onvoiceschanged = initVoice;
+  initVoice();
+}
+
+function speakSyllable(syl){
+  if(!speechSynth) return;
+  // Cancel any current speech
+  speechSynth.cancel();
+
+  const utter = new SpeechSynthesisUtterance(syl.toLowerCase());
+
+  // Eerie settings — slow, low pitch, quiet
+  utter.rate = 0.4 + (phBurst * 0.04);  // very slow — ghostly
+  utter.pitch = 0.3 + (phPitch / 600);  // low pitch — deep/eerie
+  utter.volume = 0.9;
+
+  if(voxVoice) utter.voice = voxVoice;
+
+  speechSynth.speak(utter);
+}
+
 function triggerVoxBurst(syl) {
   const el = document.getElementById('voxSyl');
   const prev = document.getElementById('voxPrev');
-  // Fade out old
   el.classList.remove('active');
   setTimeout(() => {
     el.textContent = syl;
     el.classList.add('active');
-    // Log to history
+    // Play the voice sound for this syllable
+    speakSyllable(syl);
     voxHistory.unshift(syl);
     if(voxHistory.length > 12) voxHistory.pop();
     prev.textContent = voxHistory.slice(1, 5).join('  ');
-    // Update ph log
     const ts = new Date().toLocaleTimeString();
     phLogs.unshift(ts + ' · ' + syl);
     if(phLogs.length > 8) phLogs.pop();
@@ -409,7 +460,6 @@ function triggerVoxBurst(syl) {
       `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
     lg('[ VOX ] ' + syl, 'dt');
   }, 80);
-  // Auto-fade after burst duration
   clearTimeout(voxBurstTmr);
   voxBurstTmr = setTimeout(() => {
     el.classList.remove('active');
@@ -773,6 +823,9 @@ const pC=document.getElementById('phonC'),pX=pC.getContext('2d');
 async function togglePh(){
   if(!phOn){
     if(!AC)await initAudio();
+    if(!AC)return;
+    // Resume audio context if suspended (required on mobile)
+    if(AC.state==='suspended')await AC.resume();
     phOn=true;
     document.getElementById('phBtn').textContent='■ DEACTIVATE VOX';
     document.getElementById('phBtn').classList.add('on');
@@ -791,124 +844,60 @@ async function togglePh(){
 }
 
 function buildVT(){
-  if(!AC)return;
-  // Pure voice: sawtooth oscillator through dual formant filters only
-  // No noise, no static — clean vocal tract model like GhostTube VOX
-  phOsc=AC.createOscillator();
-  phOsc.type='sawtooth';
-  phOsc.frequency.value=phPitch;
-
-  // Second oscillator one octave up for richer vocal harmonic
-  phOsc2=AC.createOscillator();
-  phOsc2.type='sawtooth';
-  phOsc2.frequency.value=phPitch*2;
-
-  // Mix both oscillators
-  phMix=AC.createGain();
-  phMix.gain.value=0.6;
-  phOsc2Gain=AC.createGain();
-  phOsc2Gain.gain.value=0.25;
-
-  // F1 — vowel openness (low formant)
-  phF1n=AC.createBiquadFilter();
-  phF1n.type='bandpass';
-  phF1n.frequency.value=500;
-  phF1n.Q.value=5;
-
-  // F2 — vowel color (mid formant)
-  phF2n=AC.createBiquadFilter();
-  phF2n.type='bandpass';
-  phF2n.frequency.value=1500;
-  phF2n.Q.value=6;
-
-  // F3 — presence/brightness (high formant, subtle)
-  phF3n=AC.createBiquadFilter();
-  phF3n.type='bandpass';
-  phF3n.frequency.value=2800;
-  phF3n.Q.value=4;
-
-  // Master gain — starts at 0 (silent until triggered)
-  phGn=AC.createGain();
-  phGn.gain.value=0;
-
-  // Soft clip to keep it smooth
-  phGn.connect(AC.destination);
-
-  // Signal chain: osc -> F1 -> F2 -> F3 -> gain -> out
-  phOsc.connect(phMix);
-  phOsc2.connect(phOsc2Gain);
-  phOsc2Gain.connect(phMix);
-  phMix.connect(phF1n);
-  phF1n.connect(phF2n);
-  phF2n.connect(phF3n);
-  phF3n.connect(phGn);
-
-  phOsc.start();
-  phOsc2.start();
+  // No continuous oscillator — complete silence between syllables
+  // Voice only plays when a syllable is triggered via speakSyllable()
+  voxF1Target = 500;
+  voxF2Target = 1500;
 }
 
 function driveVT(){
-  if(!AN||!phOn||!AC)return;
-  const bL=AN.frequencyBinCount,fD=new Uint8Array(bL);
-  AN.getByteFrequencyData(fD);
-  const bHz=(AC.sampleRate/2)/bL,thr=(11-phSens)*8;
-  let lp=0,lHz=100,mp=0,mHz=1000,mSum=0,mCnt=0;
-  for(let i=1;i<bL;i++){
-    const hz=i*bHz,v=fD[i];
-    if(hz<350){if(v>lp){lp=v;lHz=hz;}}
-    else if(hz<4000){mSum+=v;mCnt++;if(v>mp){mp=v;mHz=hz;}}
+  if(!phOn||!AC)return;
+
+  // Use mic if available, otherwise use internal EMF simulation
+  let mAvg = 0, lHz = 100, mHz = 1000;
+
+  if(AN){
+    const bL=AN.frequencyBinCount, fD=new Uint8Array(bL);
+    AN.getByteFrequencyData(fD);
+    const bHz=(AC.sampleRate/2)/bL;
+    let lp=0,mp=0,mSum=0,mCnt=0;
+    for(let i=1;i<bL;i++){
+      const hz=i*bHz,v=fD[i];
+      if(hz<350){if(v>lp){lp=v;lHz=hz;}}
+      else if(hz<4000){mSum+=v;mCnt++;if(v>mp){mp=v;mHz=hz;}}
+    }
+    mAvg=mCnt?mSum/mCnt:0;
+  } else {
+    // No mic — simulate natural variation for standalone mode
+    const t = Date.now() * 0.001;
+    mAvg = 35 + Math.sin(t*0.7)*20 + Math.sin(t*1.3)*15;
+    lHz = 120 + Math.sin(t*0.4)*80;
+    mHz = 1200 + Math.sin(t*0.6)*600;
   }
-  const mAvg=mCnt?mSum/mCnt:0;
+
   document.getElementById('phF1').textContent=Math.round(lHz)+'Hz';
   document.getElementById('phF2').textContent=Math.round(mHz)+'Hz';
 
-  // Silence when no signal — no continuous sound
-  if(mAvg<thr){
-    phGn.gain.setTargetAtTime(0,AC.currentTime,0.08);
-    drawPh(0,voxF1Target,voxF2Target);
-    voxSilence++;
-    return;
-  }
-
-  // Map mic frequencies to vocal formant positions
-  const glideTime=0.04+(phGlide/10)*0.3;
-  const f1=Math.max(280,Math.min(900,lHz*3.2));
-  const f2=Math.max(700,Math.min(2600,mHz*0.7));
-  const f3=Math.max(2200,Math.min(3500,f2*1.8));
-
-  // Smooth glide between formant positions
-  voxF1Target+=(f1-voxF1Target)*0.12;
-  voxF2Target+=(f2-voxF2Target)*0.12;
-
-  phF1n.frequency.setTargetAtTime(voxF1Target,AC.currentTime,glideTime);
-  phF2n.frequency.setTargetAtTime(voxF2Target,AC.currentTime,glideTime);
-  phF3n.frequency.setTargetAtTime(f3,AC.currentTime,glideTime);
-
-  // Pitch variation from low-freq energy
-  const pitchMod=phPitch+(lHz*0.08);
-  phOsc.frequency.setTargetAtTime(Math.min(pitchMod,phPitch*1.4),AC.currentTime,0.1);
-  phOsc2.frequency.setTargetAtTime(Math.min(pitchMod*2,phPitch*2.8),AC.currentTime,0.1);
-
-  // Voice volume — smooth fade in/out, no clicks
-  const vAmt=Math.min(0.45,(mAvg/255)*0.7*(phSens/5));
-  phGn.gain.setTargetAtTime(vAmt,AC.currentTime,0.06);
+  // Map to formant targets
+  voxF1Target += (Math.max(280,Math.min(900,lHz*3.2)) - voxF1Target) * 0.12;
+  voxF2Target += (Math.max(700,Math.min(2600,mHz*0.7)) - voxF2Target) * 0.12;
 
   document.getElementById('phStatus').textContent='F1:'+Math.round(voxF1Target)+'Hz  F2:'+Math.round(voxF2Target)+'Hz';
-  drawPh(vAmt,voxF1Target,voxF2Target);
+  drawPh(mAvg/255, voxF1Target, voxF2Target);
 
-  // EMF/frequency triggered syllable display
-  const now=Date.now();
-  const emfTrigger=emfV>25+(10-phSens)*4;
-  const energySpike=mAvg>thr*1.8;
-  const cooldown=800-phBurst*60;
+  // Trigger syllable when threshold crossed
+  const now = Date.now();
+  const thr = (11-phSens)*8;
+  const emfTrigger = emfV > 25+(10-phSens)*4;
+  const energySpike = mAvg > thr*1.5;
+  const cooldown = 900 - phBurst*60;
 
-  if((emfTrigger||energySpike)&&now-voxLastTrig>cooldown){
-    voxLastTrig=now;
-    const syl=buildSyllable(voxF1Target,voxF2Target,0,emfV);
+  if((emfTrigger||energySpike) && now-voxLastTrig > cooldown){
+    voxLastTrig = now;
+    const syl = buildSyllable(voxF1Target, voxF2Target, 0, emfV);
     triggerVoxBurst(syl);
-    document.getElementById('phTrig').textContent=emfTrigger?'EMF':'FREQ';
+    document.getElementById('phTrig').textContent = emfTrigger?'EMF':'FREQ';
   }
-  voxSilence=0;
 }
 
 function drawPh(v,f1,f2){
@@ -925,13 +914,8 @@ function drawPh(v,f1,f2){
 }
 
 function killVT(){
-  if(!AC)return;
-  if(phGn)phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
-  setTimeout(()=>{
-    try{if(phOsc)phOsc.stop();}catch(e){}
-    try{if(phOsc2)phOsc2.stop();}catch(e){}
-    phOsc=phOsc2=phMix=phOsc2Gain=phF1n=phF2n=phF3n=phGn=null;
-  },300);
+  // No continuous oscillator to kill — speakSyllable nodes are self-contained
+  phOsc=phOsc2=phMix=phOsc2Gain=phF1n=phF2n=phF3n=phGn=null;
 }
 
 // ── Library
