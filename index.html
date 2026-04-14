@@ -235,11 +235,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <!-- WRAITH VOX — Radio snippet voice -->
 <div class="panel active" id="panel-ph">
 
-  <div class="vox-display">
-    <div class="vox-syllable" id="voxSyl">—</div>
-    <div class="vox-prev" id="voxPrev"></div>
-  </div>
-
   <div class="ph-box">
     <canvas id="phonC" width="400" height="160"></canvas>
     <div id="phStatus">Awaiting signal...</div>
@@ -352,9 +347,6 @@ function getVoxStream(f1, f2){
 }
 
 function fireVoxClip(stream){
-  const el = document.getElementById('voxSyl');
-  const prev = document.getElementById('voxPrev');
-
   // Stop any currently playing clip
   if(voxCurrentAudio){
     try{ voxCurrentAudio.pause(); }catch(e){}
@@ -362,21 +354,14 @@ function fireVoxClip(stream){
     voxCurrentAudio=null;
   }
 
-  // Clip duration driven by Clip Length slider (1-3 seconds)
   const clipDur = 800 + phBurst * 220;
-
-  // Create audio with reverb/distortion effect chain via Web Audio
   const audio = new Audio();
   audio.crossOrigin = 'anonymous';
   audio.src = stream.u;
 
-  // Connect through Web Audio for effects if available
   if(AC){
     try{
       const src = AC.createMediaElementSource(audio);
-
-      // Reverb convolver
-      let chain = src;
       if(voxReverb > 0){
         const conv = AC.createConvolver();
         const len = AC.sampleRate * (0.3 + voxReverb * 0.15);
@@ -393,10 +378,7 @@ function fireVoxClip(stream){
       } else {
         src.connect(AC.destination);
       }
-    }catch(e){
-      // Fallback — play direct
-      audio.volume = 1.0;
-    }
+    }catch(e){ audio.volume = 1.0; }
   }
 
   audio.play().then(()=>{
@@ -407,35 +389,24 @@ function fireVoxClip(stream){
     document.getElementById('phTrig').textContent = 'LIVE';
     document.getElementById('phStatus').textContent = '▶ ' + stream.n;
 
-    // Show stream name in display
-    el.textContent = stream.n.split(' ').pop().toUpperCase();
-    el.classList.add('active');
-
-    // Save to history
-    voxHistory.unshift(stream.n.split(' ').pop().toUpperCase());
-    if(voxHistory.length > 8) voxHistory.pop();
-    prev.textContent = voxHistory.slice(1,5).join('  ');
-
-    // Log
+    // Log only — no text on main display
     const ts = new Date().toLocaleTimeString();
     phLogs.unshift(ts + ' · ' + stream.n);
     if(phLogs.length > 8) phLogs.pop();
     document.getElementById('phLog').innerHTML = phLogs.map(l =>
       `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
-    lg('[ VOX ] ' + stream.n, 'dt');
+    lg('[ WRAITH ] ' + stream.n, 'dt');
 
     // Stop after clip duration
     setTimeout(()=>{
       try{ audio.pause(); }catch(e){}
       audio.src='';
       voxCurrentAudio=null;
-      el.classList.remove('active');
-      el.textContent='—';
       document.getElementById('phStatus').textContent='Scanning...';
     }, clipDur);
 
   }).catch(()=>{
-    lg('[ VOX ] Stream unavailable — retrying','ev');
+    lg('[ WRAITH ] Stream unavailable — retrying','ev');
   });
 }
 
