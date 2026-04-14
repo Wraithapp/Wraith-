@@ -339,11 +339,10 @@ let vizPh=0;
 // Real human voices — no synthesis, no word banks
 
 function getVoxStream(f1, f2){
-  // Map frequency position to stream index — environment picks the stream
   const norm = Math.max(0, Math.min(1, (f2 - 700) / 1900));
-  const timeShift = Math.floor(Date.now() / 4000) % ST.length;
-  const idx = (Math.floor(norm * ST.length) + timeShift) % ST.length;
-  return ST[idx];
+  const timeShift = Math.floor(Date.now() / 4000) % VOX_ST.length;
+  const idx = (Math.floor(norm * VOX_ST.length) + timeShift) % VOX_ST.length;
+  return VOX_ST[idx];
 }
 
 function fireVoxClip(stream){
@@ -353,8 +352,8 @@ function fireVoxClip(stream){
     voxCurrentAudio=null;
   }
 
-  // Very short clip — 300ms to 800ms max, like GhostTube VOX bursts
-  const clipDur = 300 + phBurst * 50;
+  // Extremely short clip — 150ms to 400ms — just a word fragment
+  const clipDur = 150 + phBurst * 25;
 
   const audio = new Audio();
   audio.crossOrigin = 'anonymous';
@@ -458,8 +457,8 @@ function driveVT(){
   const now=Date.now();
   const thr=(11-phSens)*8;
   const energySpike=mAvg>thr*2.0; // higher threshold = less frequent
-  // Long cooldown — 3 to 8 seconds between clips
-  const cooldown=Math.max(3000, 8000-phBurst*500);
+  // Long silence between fragments — 4 to 10 seconds
+  const cooldown=Math.max(4000, 10000-phBurst*600);
 
   if(energySpike && now-voxLastTrig>cooldown && !voxCurrentAudio){
     voxLastTrig=now;
@@ -509,6 +508,20 @@ const ST=[
   {n:'Classic FM',u:'https://media-ice.musicradio.com/ClassicFMMP3'},
   {n:'KQED SF',u:'https://streams.kqed.org/kqedradio'},
   {n:'SomaFM Covers',u:'https://ice2.somafm.com/covers-128-mp3'},
+];
+
+// ── VOX uses talk/news/voice only streams — real human speech
+const VOX_ST=[
+  {n:'NPR News',u:'https://npr-ice.streamguys1.com/live.mp3'},
+  {n:'BBC World Service',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'},
+  {n:'BBC Radio 4',u:'https://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm'},
+  {n:'WNYC New York',u:'https://wnyc-fm939-ice.streamguys1.com/wnyc-fm939-public.aac'},
+  {n:'WBEZ Chicago',u:'https://stream.wbez.org/wbez128.mp3'},
+  {n:'KQED San Francisco',u:'https://streams.kqed.org/kqedradio'},
+  {n:'KCRW Los Angeles',u:'https://kcrw.streamguys1.com/kcrw_192k_mp3_e24'},
+  {n:'WBUR Boston',u:'https://streams.wbur.org/wbur128.mp3'},
+  {n:'KUT Austin',u:'https://kut.streamguys1.com/kut-high.mp3'},
+  {n:'KUOW Seattle',u:'https://kuow.streamguys1.com/kuow128.mp3'},
 ];
 
 function lg(m,t){
