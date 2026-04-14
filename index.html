@@ -430,12 +430,16 @@ if(speechSynth){
 }
 
 function speakSyllable(phoneme){
-  if(!speechSynth) return;
+  // Don't speak individual phonemes — we speak the full word on completion
+  // This function is now a no-op, speakWord handles it
+}
+
+function speakWord(word){
+  if(!speechSynth || !word) return;
   speechSynth.cancel();
-  const utter = new SpeechSynthesisUtterance(phoneme);
-  // Demon voice — absolute lowest pitch, very slow, full volume
-  utter.rate = 0.3;       // very slow and drawn out
-  utter.pitch = 0.1;      // as low as possible — deep demon tone
+  const utter = new SpeechSynthesisUtterance(word);
+  utter.rate = 0.55;    // slow and drawn out
+  utter.pitch = 0.1;    // as low as possible
   utter.volume = 1.0;
   if(voxVoice) utter.voice = voxVoice;
   speechSynth.speak(utter);
@@ -465,52 +469,57 @@ function triggerVoxBurst(phoneme) {
   const el = document.getElementById('voxSyl');
   const prev = document.getElementById('voxPrev');
 
-  // Add phoneme to chain
+  // Add to chain silently — nothing shows yet
   voxChain.push(phoneme);
   voxLetterChain += phonemeToLetters(phoneme);
 
-  // Reset chain timeout — silence for 2.5s resets the word
+  // Reset chain timeout — 2s silence = word is complete, speak it
   clearTimeout(voxChainTimer);
   voxChainTimer = setTimeout(() => {
-    // Save completed word to history before resetting
     if(voxLetterChain.length > 1){
-      voxHistory.unshift(voxLetterChain.toUpperCase());
+      const word = voxLetterChain;
+      // Show the complete word all at once
+      el.textContent = word.toUpperCase();
+      el.classList.add('active');
+      // Speak the whole word
+      speakWord(word);
+      // Save to history
+      voxHistory.unshift(word.toUpperCase());
       if(voxHistory.length > 8) voxHistory.pop();
-      prev.textContent = voxHistory.slice(0, 4).join('  ');
+      prev.textContent = voxHistory.slice(1,5).join('  ');
+      // Log
+      const ts = new Date().toLocaleTimeString();
+      phLogs.unshift(ts + ' · ' + word.toUpperCase());
+      if(phLogs.length > 8) phLogs.pop();
+      document.getElementById('phLog').innerHTML = phLogs.map(l =>
+        `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
+      lg('[ VOX ] ' + word.toUpperCase(), 'dt');
+      // Fade out after speaking
+      setTimeout(()=>{
+        el.classList.remove('active');
+        el.textContent = '—';
+      }, 2500);
     }
     voxChain = [];
     voxLetterChain = '';
-    el.classList.remove('active');
-    el.textContent = '—';
-  }, 2500);
+  }, 2000);
 
-  // Display the building word in real letters
-  el.classList.add('active');
-  el.textContent = voxLetterChain.toUpperCase();
-
-  // Speak the phoneme sound
-  speakSyllable(phoneme);
-
-  // Log to ph log
-  const ts = new Date().toLocaleTimeString();
-  phLogs.unshift(ts + ' · ' + phonemeToLetters(phoneme));
-  if(phLogs.length > 8) phLogs.pop();
-  document.getElementById('phLog').innerHTML = phLogs.map(l =>
-    `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
-  lg('[ VOX ] ' + phonemeToLetters(phoneme), 'dt');
-
-  // Auto-reset after 8 letters — long enough for most words
+  // Auto complete at 8 letters
   if(voxLetterChain.length >= 8){
     clearTimeout(voxChainTimer);
-    voxHistory.unshift(voxLetterChain.toUpperCase());
+    const word = voxLetterChain;
+    el.textContent = word.toUpperCase();
+    el.classList.add('active');
+    speakWord(word);
+    voxHistory.unshift(word.toUpperCase());
     if(voxHistory.length > 8) voxHistory.pop();
-    prev.textContent = voxHistory.slice(0, 4).join('  ');
+    prev.textContent = voxHistory.slice(1,5).join('  ');
     voxChain = [];
     voxLetterChain = '';
     setTimeout(()=>{
       el.classList.remove('active');
       el.textContent = '—';
-    }, 1200);
+    }, 2500);
   }
 }
 
