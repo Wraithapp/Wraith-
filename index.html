@@ -337,8 +337,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 let AC=null,mic=null,AN=null;
 let sbOn=false,sbT=null,sbIdx=0,sbDir=1,sbSpd=500;
 let evpOn=false,evpRec=null,evpChunks=[],evpFilt='raw',evpCaps=[];
-let phOn=false,phTmr=null,phOsc=null,phNoise=null;
-let phF1n=null,phF2n=null,phNF=null,phGn=null,phNG=null;
+let phOn=false,phTmr=null,phOsc=null,phOsc2=null,phMix=null,phOsc2Gain=null;
+let phF1n=null,phF2n=null,phF3n=null,phGn=null,phNG=null,phNF=null,phNoise=null;
 let phSens=5,phPitch=120,phGlide=5,phBurst=4,phLogs=[];
 let recSt={},emfV=0;
 let vizPh=0;
@@ -792,18 +792,59 @@ async function togglePh(){
 
 function buildVT(){
   if(!AC)return;
-  phOsc=AC.createOscillator();phOsc.type='sawtooth';phOsc.frequency.value=phPitch;
-  const nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
-  const nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
-  phNoise=AC.createBufferSource();phNoise.buffer=nb;phNoise.loop=true;
-  phF1n=AC.createBiquadFilter();phF1n.type='bandpass';phF1n.frequency.value=500;phF1n.Q.value=3;
-  phF2n=AC.createBiquadFilter();phF2n.type='bandpass';phF2n.frequency.value=1500;phF2n.Q.value=4;
-  phNF=AC.createBiquadFilter();phNF.type='bandpass';phNF.frequency.value=4000;phNF.Q.value=1.5;
-  phGn=AC.createGain();phGn.gain.value=0;
-  phNG=AC.createGain();phNG.gain.value=0;
-  phOsc.connect(phF1n);phF1n.connect(phF2n);phF2n.connect(phGn);phGn.connect(AC.destination);
-  phNoise.connect(phNF);phNF.connect(phNG);phNG.connect(AC.destination);
-  phOsc.start();phNoise.start();
+  // Pure voice: sawtooth oscillator through dual formant filters only
+  // No noise, no static — clean vocal tract model like GhostTube VOX
+  phOsc=AC.createOscillator();
+  phOsc.type='sawtooth';
+  phOsc.frequency.value=phPitch;
+
+  // Second oscillator one octave up for richer vocal harmonic
+  phOsc2=AC.createOscillator();
+  phOsc2.type='sawtooth';
+  phOsc2.frequency.value=phPitch*2;
+
+  // Mix both oscillators
+  phMix=AC.createGain();
+  phMix.gain.value=0.6;
+  phOsc2Gain=AC.createGain();
+  phOsc2Gain.gain.value=0.25;
+
+  // F1 — vowel openness (low formant)
+  phF1n=AC.createBiquadFilter();
+  phF1n.type='bandpass';
+  phF1n.frequency.value=500;
+  phF1n.Q.value=5;
+
+  // F2 — vowel color (mid formant)
+  phF2n=AC.createBiquadFilter();
+  phF2n.type='bandpass';
+  phF2n.frequency.value=1500;
+  phF2n.Q.value=6;
+
+  // F3 — presence/brightness (high formant, subtle)
+  phF3n=AC.createBiquadFilter();
+  phF3n.type='bandpass';
+  phF3n.frequency.value=2800;
+  phF3n.Q.value=4;
+
+  // Master gain — starts at 0 (silent until triggered)
+  phGn=AC.createGain();
+  phGn.gain.value=0;
+
+  // Soft clip to keep it smooth
+  phGn.connect(AC.destination);
+
+  // Signal chain: osc -> F1 -> F2 -> F3 -> gain -> out
+  phOsc.connect(phMix);
+  phOsc2.connect(phOsc2Gain);
+  phOsc2Gain.connect(phMix);
+  phMix.connect(phF1n);
+  phF1n.connect(phF2n);
+  phF2n.connect(phF3n);
+  phF3n.connect(phGn);
+
+  phOsc.start();
+  phOsc2.start();
 }
 
 function driveVT(){
@@ -811,69 +852,74 @@ function driveVT(){
   const bL=AN.frequencyBinCount,fD=new Uint8Array(bL);
   AN.getByteFrequencyData(fD);
   const bHz=(AC.sampleRate/2)/bL,thr=(11-phSens)*8;
-  let lp=0,lHz=100,mp=0,mHz=1000,hSum=0,hCnt=0,mSum=0,mCnt=0;
+  let lp=0,lHz=100,mp=0,mHz=1000,mSum=0,mCnt=0;
   for(let i=1;i<bL;i++){
     const hz=i*bHz,v=fD[i];
     if(hz<350){if(v>lp){lp=v;lHz=hz;}}
     else if(hz<4000){mSum+=v;mCnt++;if(v>mp){mp=v;mHz=hz;}}
-    else if(hz<14000){hSum+=v;hCnt++;}
   }
-  const mAvg=mCnt?mSum/mCnt:0,hAvg=hCnt?hSum/hCnt:0;
+  const mAvg=mCnt?mSum/mCnt:0;
   document.getElementById('phF1').textContent=Math.round(lHz)+'Hz';
   document.getElementById('phF2').textContent=Math.round(mHz)+'Hz';
 
+  // Silence when no signal — no continuous sound
   if(mAvg<thr){
-    phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
-    phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);
-    drawPh(0,500,1500,0);
+    phGn.gain.setTargetAtTime(0,AC.currentTime,0.08);
+    drawPh(0,voxF1Target,voxF2Target);
     voxSilence++;
     return;
   }
 
-  // Map mic frequencies to F1/F2 formant targets
-  const glideTime = 0.02 + (phGlide / 10) * 0.25;
-  const f1=Math.max(250,Math.min(900,lHz*3.2));
-  const f2=Math.max(600,Math.min(2600,mHz*0.7));
+  // Map mic frequencies to vocal formant positions
+  const glideTime=0.04+(phGlide/10)*0.3;
+  const f1=Math.max(280,Math.min(900,lHz*3.2));
+  const f2=Math.max(700,Math.min(2600,mHz*0.7));
+  const f3=Math.max(2200,Math.min(3500,f2*1.8));
 
-  // Smooth formant gliding (Ovilus-style vowel transitions)
-  voxF1Target += (f1 - voxF1Target) * 0.15;
-  voxF2Target += (f2 - voxF2Target) * 0.15;
-
-  const vAmt=Math.min(0.4,(mAvg/255)*0.6*(phSens/5));
-  const nAmt=Math.min(0.28,(hAvg/255)*0.42*(phSens/5));
+  // Smooth glide between formant positions
+  voxF1Target+=(f1-voxF1Target)*0.12;
+  voxF2Target+=(f2-voxF2Target)*0.12;
 
   phF1n.frequency.setTargetAtTime(voxF1Target,AC.currentTime,glideTime);
   phF2n.frequency.setTargetAtTime(voxF2Target,AC.currentTime,glideTime);
-  phNF.frequency.setTargetAtTime(3000+hAvg*18,AC.currentTime,0.05);
-  phGn.gain.setTargetAtTime(vAmt,AC.currentTime,0.04);
-  phNG.gain.setTargetAtTime(nAmt,AC.currentTime,0.04);
+  phF3n.frequency.setTargetAtTime(f3,AC.currentTime,glideTime);
+
+  // Pitch variation from low-freq energy
+  const pitchMod=phPitch+(lHz*0.08);
+  phOsc.frequency.setTargetAtTime(Math.min(pitchMod,phPitch*1.4),AC.currentTime,0.1);
+  phOsc2.frequency.setTargetAtTime(Math.min(pitchMod*2,phPitch*2.8),AC.currentTime,0.1);
+
+  // Voice volume — smooth fade in/out, no clicks
+  const vAmt=Math.min(0.45,(mAvg/255)*0.7*(phSens/5));
+  phGn.gain.setTargetAtTime(vAmt,AC.currentTime,0.06);
 
   document.getElementById('phStatus').textContent='F1:'+Math.round(voxF1Target)+'Hz  F2:'+Math.round(voxF2Target)+'Hz';
-  drawPh(vAmt,voxF1Target,voxF2Target,nAmt);
+  drawPh(vAmt,voxF1Target,voxF2Target);
 
-  // EMF-triggered syllable burst — fires when energy crosses threshold
-  // Uses EMF level + frequency data to build syllable, no pre-stored words
-  const now = Date.now();
-  const emfTrigger = emfV > 25 + (10 - phSens) * 4;
-  const energySpike = mAvg > thr * 1.8;
-  const cooldown = 800 - phBurst * 60;
+  // EMF/frequency triggered syllable display
+  const now=Date.now();
+  const emfTrigger=emfV>25+(10-phSens)*4;
+  const energySpike=mAvg>thr*1.8;
+  const cooldown=800-phBurst*60;
 
-  if((emfTrigger || energySpike) && now - voxLastTrig > cooldown){
-    voxLastTrig = now;
-    const syl = buildSyllable(voxF1Target, voxF2Target, hAvg, emfV);
+  if((emfTrigger||energySpike)&&now-voxLastTrig>cooldown){
+    voxLastTrig=now;
+    const syl=buildSyllable(voxF1Target,voxF2Target,0,emfV);
     triggerVoxBurst(syl);
-    document.getElementById('phTrig').textContent = emfTrigger ? 'EMF' : 'FREQ';
+    document.getElementById('phTrig').textContent=emfTrigger?'EMF':'FREQ';
   }
-
-  voxSilence = 0;
+  voxSilence=0;
 }
 
-function drawPh(v,f1,f2,n){
+function drawPh(v,f1,f2){
   const W=pC.width,H=pC.height;
-  pX.fillStyle='rgba(0,0,0,0.35)';pX.fillRect(0,0,W,H);
-  pX.fillStyle=`rgba(0,255,136,${0.15+v*2})`;pX.fillRect(0,H*0.08,(f1/900)*W,H*0.35);
-  pX.fillStyle=`rgba(0,229,255,${0.15+v*1.5})`;pX.fillRect(0,H*0.55,(f2/2600)*W,H*0.35);
-  if(n>0.02){pX.fillStyle=`rgba(212,197,169,${n*1.5})`;for(let i=0;i<30;i++)pX.fillRect(Math.random()*W,Math.random()*H,2,2);}
+  pX.fillStyle='rgba(0,0,0,0.4)';pX.fillRect(0,0,W,H);
+  // F1 bar
+  pX.fillStyle=`rgba(0,255,136,${0.1+v*2.5})`;
+  pX.fillRect(0,H*0.08,(f1/900)*W,H*0.35);
+  // F2 bar
+  pX.fillStyle=`rgba(0,229,255,${0.1+v*2})`;
+  pX.fillRect(0,H*0.55,(f2/2600)*W,H*0.35);
   pX.fillStyle='rgba(212,197,169,0.2)';pX.font='9px monospace';
   pX.fillText('F1 VOWEL',5,H*0.32);pX.fillText('F2 COLOR',5,H*0.79);
 }
@@ -881,8 +927,11 @@ function drawPh(v,f1,f2,n){
 function killVT(){
   if(!AC)return;
   if(phGn)phGn.gain.setTargetAtTime(0,AC.currentTime,0.05);
-  if(phNG)phNG.gain.setTargetAtTime(0,AC.currentTime,0.05);
-  setTimeout(()=>{try{if(phOsc)phOsc.stop();}catch(e){}try{if(phNoise)phNoise.stop();}catch(e){}phOsc=phNoise=phF1n=phF2n=phGn=phNG=phNF=null;},300);
+  setTimeout(()=>{
+    try{if(phOsc)phOsc.stop();}catch(e){}
+    try{if(phOsc2)phOsc2.stop();}catch(e){}
+    phOsc=phOsc2=phMix=phOsc2Gain=phF1n=phF2n=phF3n=phGn=null;
+  },300);
 }
 
 // ── Library
