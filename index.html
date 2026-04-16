@@ -26,9 +26,9 @@ canvas{width:100%;display:block;background:#050505;border:1px solid #1a0000;bord
 #specC{height:36px}
 
 .tabs{display:flex;margin:10px 16px 0;border:1px solid #2a0000;border-radius:2px;overflow:hidden}
-.tab{flex:1;padding:10px 2px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:0.07em;color:#444;background:#000;border:none;cursor:pointer;text-transform:uppercase;border-right:1px solid #1a0000;transition:background 0.2s,color 0.2s}
+.tab{flex:1;padding:10px 2px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:0.07em;color:#8b0000;background:#000;border:none;cursor:pointer;text-transform:uppercase;border-right:1px solid #1a0000;transition:background 0.2s,color 0.2s}
 .tab:last-child{border-right:none}
-.tab.active{background:#1a0000;color:#d4c5a9}
+.tab.active{background:#1a0000;color:#c0392b}
 .panel{display:none;padding:14px 16px}
 .panel.active{display:block}
 .freq-box{text-align:center;padding:18px 10px;background:#050505;border:1px solid #2a0000;border-radius:2px;margin-bottom:10px}
@@ -123,8 +123,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <button class="tab active" onclick="showTab('ph',this)">WRAITH</button>
   <button class="tab" onclick="showTab('sb',this)">SWEEP</button>
   <button class="tab" onclick="showTab('evp',this)">EVP</button>
-  <button class="tab" onclick="showTab('lib',this)" style="color:rgba(255,215,0,0.5)">📁 LIB</button>
-  <button class="tab" onclick="showTab('priv',this)" style="font-size:0.42rem;color:rgba(212,197,169,0.3)">PRIVACY</button>
+  <button class="tab" onclick="showTab('lib',this)">LIBRARY</button>
+  <button class="tab" onclick="showTab('guide',this)">GUIDE</button>
+  <button class="tab" onclick="showTab('priv',this)">PRIVACY</button>
 </div>
 
 <!-- SPIRIT BOX -->
@@ -240,11 +241,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div id="phStatus">Awaiting signal...</div>
   </div>
 
-  <div class="ph-stats">
-    <div class="phst"><div class="phst-l">Status</div><div class="phst-v" id="phTrig">—</div></div>
-    <div class="phst"><div class="phst-l">Contacts</div><div class="phst-v" id="phClips">0</div></div>
-    <div class="phst"><div class="phst-l">Signal</div><div class="phst-v" id="phStatus2">—</div></div>
-  </div>
+
 
   <div class="cg2">
     <div class="cg">
@@ -287,6 +284,95 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <button class="lf" onclick="setLibFilter(this,'ph')"> WRAITH</button>
   </div>
   <div id="libList"><div class="lib-empty">No recordings yet.<br>Hit ⬤ RECORD on any feature<br>to save sessions here.</div></div>
+</div>
+
+<div class="panel" id="panel-guide">
+  <div style="font-family:'Cinzel',serif;font-size:0.9rem;letter-spacing:0.3em;color:#d4c5a9;text-align:center;margin-bottom:16px">HOW TO USE</div>
+
+  <!-- WRAITH -->
+  <div style="margin-bottom:20px;border:1px solid #1a0000;border-radius:2px;overflow:hidden">
+    <div style="background:#0a0000;padding:10px 14px;border-bottom:1px solid #1a0000">
+      <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;color:#c0392b">👁 WRAITH — SPIRIT VOICE</span>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:0.5rem;color:#555;line-height:1.8;letter-spacing:0.04em;margin-bottom:10px">Organic frequency-based spirit communication. The theory: spirits manipulate electromagnetic frequencies to select and transmit fragments of sound. What comes through is chosen by the environment — not by the app.</div>
+      <div style="font-size:0.48rem;color:#c0392b;letter-spacing:0.12em;margin-bottom:6px;text-transform:uppercase">How to use</div>
+      <div style="font-size:0.48rem;color:#555;line-height:1.9;letter-spacing:0.04em">1. Tap ACTIVATE WRAITH<br>2. Allow microphone access<br>3. Remain still and silent<br>4. Wait for fragments to come through<br>5. Listen carefully to what breaks the silence</div>
+      <div style="margin-top:10px;background:#050000;border:1px solid #1a0000;padding:8px 10px;border-radius:2px">
+        <div style="font-size:0.44rem;color:#c0392b;letter-spacing:0.15em;margin-bottom:3px;text-transform:uppercase">Tip</div>
+        <div style="font-size:0.48rem;color:#444;line-height:1.7">Ask a question out loud, then wait in silence. The spirit may respond through the next fragment. Longer pauses yield better results.</div>
+      </div>
+      <div style="margin-top:10px;font-size:0.48rem;color:#555;line-height:1.8">
+        <span style="color:#d4c5a9">Sensitivity</span> — how much energy triggers a response<br>
+        <span style="color:#d4c5a9">Clip Length</span> — duration of each fragment<br>
+        <span style="color:#d4c5a9">Reverb</span> — adds ethereal depth to the voice<br>
+        <span style="color:#d4c5a9">Distort</span> — raw, unnatural quality to fragments
+      </div>
+    </div>
+  </div>
+
+  <!-- SWEEP -->
+  <div style="margin-bottom:20px;border:1px solid #1a0000;border-radius:2px;overflow:hidden">
+    <div style="background:#0a0000;padding:10px 14px;border-bottom:1px solid #1a0000">
+      <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;color:#00e5ff">📻 SWEEP — SPIRIT BOX</span>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:0.5rem;color:#555;line-height:1.8;letter-spacing:0.04em;margin-bottom:10px">Sweeps continuously through live FM and AM radio frequencies. Real radio signals — no pre-recorded audio. Silence between stations creates space for spirit voices to emerge.</div>
+      <div style="font-size:0.48rem;color:#00e5ff;letter-spacing:0.12em;margin-bottom:6px;text-transform:uppercase">How to use</div>
+      <div style="font-size:0.48rem;color:#555;line-height:1.9;letter-spacing:0.04em">1. Tap INITIATE SCAN<br>2. Select FM or AM band<br>3. Adjust Speed (slower = more time on each station)<br>4. Listen for words that stand out from static<br>5. Use REVERSE DIRECTION to sweep backward</div>
+      <div style="margin-top:10px;font-size:0.48rem;color:#555;line-height:1.8">
+        <span style="color:#d4c5a9">Ghost Hz</span> — 18.98Hz infrasound tone, theorized to induce feelings of presence<br>
+        <span style="color:#d4c5a9">Echo / Reverb</span> — audio effects to help isolate voices<br>
+        <span style="color:#d4c5a9">Volume</span> — output level of the sweep
+      </div>
+      <div style="margin-top:10px;background:#050000;border:1px solid #1a0000;padding:8px 10px;border-radius:2px">
+        <div style="font-size:0.44rem;color:#00e5ff;letter-spacing:0.15em;margin-bottom:3px;text-transform:uppercase">Tip</div>
+        <div style="font-size:0.48rem;color:#444;line-height:1.7">Words that appear consistently across multiple sweeps are stronger evidence. Record sessions and review afterward.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVP -->
+  <div style="margin-bottom:20px;border:1px solid #1a0000;border-radius:2px;overflow:hidden">
+    <div style="background:#0a0000;padding:10px 14px;border-bottom:1px solid #1a0000">
+      <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;color:#00ff88">🎙 EVP — ELECTRONIC VOICE</span>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:0.5rem;color:#555;line-height:1.8;letter-spacing:0.04em;margin-bottom:10px">Records audio through your microphone with optional filtering. EVP theory holds that spirits can imprint voices onto recordings that weren't audible during capture.</div>
+      <div style="font-size:0.48rem;color:#00ff88;letter-spacing:0.12em;margin-bottom:6px;text-transform:uppercase">How to use</div>
+      <div style="font-size:0.48rem;color:#555;line-height:1.9;letter-spacing:0.04em">1. Select your audio filter<br>2. Tap RECORD EVP<br>3. Ask questions — leave silence between each<br>4. Tap STOP RECORDING when done<br>5. Play back with headphones for best results<br>6. Use ✂ trim to isolate interesting sections</div>
+      <div style="margin-top:10px;font-size:0.48rem;color:#555;line-height:1.8">
+        <span style="color:#d4c5a9">RAW</span> — no filtering, records exactly what mic hears<br>
+        <span style="color:#d4c5a9">Band-Pass</span> — isolates voice frequency range<br>
+        <span style="color:#d4c5a9">Low-Pass</span> — removes hiss and high noise<br>
+        <span style="color:#d4c5a9">High-Pass</span> — removes rumble and wind noise<br>
+        <span style="color:#d4c5a9">Notch 60Hz</span> — removes electrical hum from outlets<br>
+        <span style="color:#d4c5a9">Voice Boost</span> — amplifies speech frequencies
+      </div>
+      <div style="margin-top:10px;background:#050000;border:1px solid #1a0000;padding:8px 10px;border-radius:2px">
+        <div style="font-size:0.44rem;color:#00ff88;letter-spacing:0.15em;margin-bottom:3px;text-transform:uppercase">Tip</div>
+        <div style="font-size:0.48rem;color:#444;line-height:1.7">Many EVP captures are only audible on playback. Review with headphones at higher volume. The TRIM tool lets you isolate specific moments.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div style="margin-bottom:20px;border:1px solid #1a0000;border-radius:2px;overflow:hidden">
+    <div style="background:#0a0000;padding:10px 14px;border-bottom:1px solid #1a0000">
+      <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;color:#ffd700">📁 LIBRARY — RECORDINGS</span>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:0.5rem;color:#555;line-height:1.8;letter-spacing:0.04em;margin-bottom:10px">All recordings saved automatically. Stored locally on your device only — never uploaded anywhere.</div>
+      <div style="font-size:0.48rem;color:#555;line-height:1.8">
+        <span style="color:#d4c5a9">Filter buttons</span> — sort by WRAITH, SWEEP, or EVP<br>
+        <span style="color:#d4c5a9">Download</span> — save recording to your device<br>
+        <span style="color:#d4c5a9">Delete</span> — remove individual recordings<br>
+        <span style="color:#d4c5a9">Clear All</span> — wipe entire library (cannot be undone)
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:12px;border-top:1px solid #1a0000;font-size:0.44rem;color:#2a2a2a;letter-spacing:0.08em;line-height:1.9">WRAITH is intended for paranormal investigation purposes. The paranormal is theoretical and unproven. Always approach with skepticism and respect.<br><br>© 2026 Medusa Paranormal</div>
 </div>
 
 <div class="panel" id="panel-priv">
@@ -370,13 +456,14 @@ function fireVoxClip(stream){
     voxClipCount++;
     document.getElementById('phClips').textContent = voxClipCount;
     document.getElementById('phTrig').textContent = '●';
+    document.getElementById('phStatus2').textContent = 'LIVE';
 
-    // Hard stop after very short clip duration — silence after
     setTimeout(()=>{
       try{ audio.pause(); }catch(e){}
       audio.src='';
       voxCurrentAudio=null;
       document.getElementById('phTrig').textContent = '—';
+      document.getElementById('phStatus2').textContent = '—';
     }, clipDur);
 
   }).catch(()=>{
@@ -392,6 +479,7 @@ async function togglePh(){
     document.getElementById('phBtn').textContent='■ DEACTIVATE WRAITH';
     document.getElementById('phBtn').classList.add('on');
     document.getElementById('phStatus').textContent='Scanning...';
+    document.getElementById('phStatus2').textContent='SCAN';
     lg('[ VOX ] Live radio voice synthesis active','ev');
     phTmr=setInterval(driveVT,80);
   }else{
