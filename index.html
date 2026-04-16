@@ -241,9 +241,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </div>
 
   <div class="ph-stats">
-    <div class="phst"><div class="phst-l">Trigger</div><div class="phst-v" id="phTrig">—</div></div>
-    <div class="phst"><div class="phst-l">Stream</div><div class="phst-v" id="phStream" style="font-size:0.5rem">—</div></div>
-    <div class="phst"><div class="phst-l">Clips</div><div class="phst-v" id="phClips">0</div></div>
+    <div class="phst"><div class="phst-l">Status</div><div class="phst-v" id="phTrig">—</div></div>
+    <div class="phst"><div class="phst-l">Contacts</div><div class="phst-v" id="phClips">0</div></div>
+    <div class="phst"><div class="phst-l">Signal</div><div class="phst-v" id="phStatus2">—</div></div>
   </div>
 
   <div class="cg2">
@@ -269,8 +269,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     </div>
   </div>
 
-  <div class="ph-desc">No AI. No word banks. Real human voices sourced live from internet radio streams. Triggered by microphone frequency energy. Each clip is a genuine fragment of real speech — nothing is pre-recorded or synthesized.</div>
-  <div class="ph-log" id="phLog">Signal log...</div>
+  <div class="ph-desc">Pure frequency receiver. Real voices from the ether. Nothing synthesized. Nothing pre-recorded. The spirit chooses what comes through.</div>
   <button class="btn" id="phBtn" onclick="togglePh()">▶ ACTIVATE WRAITH</button>
   <button class="btn rec" id="phRecBtn" onclick="toggleRec('ph','phRecBtn')">⬤ RECORD SESSION</button>
 </div>
@@ -313,9 +312,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </div>
 </div>
 
-<div class="logbox" id="sysLog">
-  <div class="ll">[ WRAITH ] Ready — no AI — pure frequency</div>
-</div>
+<div class="logbox" id="sysLog" style="display:none"></div>
 
 </div>
 <script>
@@ -372,27 +369,17 @@ function fireVoxClip(stream){
     voxCurrentAudio = audio;
     voxClipCount++;
     document.getElementById('phClips').textContent = voxClipCount;
-    document.getElementById('phStream').textContent = stream.n.split(' ').slice(-2).join(' ');
-    document.getElementById('phTrig').textContent = 'LIVE';
-    document.getElementById('phStatus').textContent = '● ' + stream.n;
-
-    const ts = new Date().toLocaleTimeString();
-    phLogs.unshift(ts + ' · ' + stream.n);
-    if(phLogs.length > 8) phLogs.pop();
-    document.getElementById('phLog').innerHTML = phLogs.map(l =>
-      `<div style="padding:2px 0;border-bottom:1px solid #1a0000">${l}</div>`).join('');
-    lg('[ WRAITH ] ' + stream.n, 'dt');
+    document.getElementById('phTrig').textContent = '●';
 
     // Hard stop after very short clip duration — silence after
     setTimeout(()=>{
       try{ audio.pause(); }catch(e){}
       audio.src='';
       voxCurrentAudio=null;
-      document.getElementById('phStatus').textContent='Awaiting signal...';
+      document.getElementById('phTrig').textContent = '—';
     }, clipDur);
 
   }).catch(()=>{
-    lg('[ WRAITH ] Stream unavailable','ev');
     voxCurrentAudio=null;
   });
 }
