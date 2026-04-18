@@ -478,16 +478,11 @@ function fireVoxClip(stream){
   audio.play().then(()=>{
     voxCurrentAudio = audio;
     voxClipCount++;
-    document.getElementById('phClips').textContent = voxClipCount;
-    document.getElementById('phTrig').textContent = '●';
-    document.getElementById('phStatus2').textContent = 'LIVE';
 
     setTimeout(()=>{
       try{ audio.pause(); }catch(e){}
       audio.src='';
       voxCurrentAudio=null;
-      document.getElementById('phTrig').textContent = '—';
-      document.getElementById('phStatus2').textContent = '—';
     }, clipDur);
 
   }).catch(()=>{
@@ -503,7 +498,6 @@ async function togglePh(){
     document.getElementById('phBtn').textContent='■ DEACTIVATE WRAITH';
     document.getElementById('phBtn').classList.add('on');
     document.getElementById('phStatus').textContent='Scanning...';
-    document.getElementById('phStatus2').textContent='SCAN';
     lg('[ VOX ] Live radio voice synthesis active','ev');
     phTmr=setInterval(driveVT,80);
   }else{
@@ -517,8 +511,6 @@ async function togglePh(){
     document.getElementById('phBtn').textContent='▶ ACTIVATE WRAITH';
     document.getElementById('phBtn').classList.remove('on');
     document.getElementById('phStatus').textContent='Awaiting signal...';
-    document.getElementById('voxSyl').classList.remove('active');
-    document.getElementById('voxSyl').textContent='—';
     lg('[ VOX ] Offline');
   }
 }
