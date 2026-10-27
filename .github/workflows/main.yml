@@ -1,17 +1,30 @@
-.github/workflows/main.yml:
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages and Build Android PWA
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  deploy-and-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Task 1: Your existing static site web hosting setup
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
+
+      # Task 2: Automatically generate the compliant Android App Bundle
+      - name: Build Android App Bundle (.aab)
+        uses: pwa-builder/pwa-starter-android-action@v1
+        with:
+          source_url: https://github.io
+          targetSdkVersion: 36
+          signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
+          keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+          keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
