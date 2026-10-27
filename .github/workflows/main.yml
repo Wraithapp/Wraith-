@@ -20,7 +20,7 @@ jobs:
 
       # Task 2: Automatically generate the compliant Android App Bundle
       - name: Build Android App Bundle (.aab)
-        uses: pwa-builder/pwa-starter-android-action@v1
+        uses: pwa-builder/pwa-action@v1
         with:
           source_url: https://github.io
           targetSdkVersion: 36
