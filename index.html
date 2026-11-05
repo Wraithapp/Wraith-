@@ -1018,7 +1018,83 @@ async function toggleRec(type,btnId){
   }
 }
 
-lg('[ SYS ] Ready — tap Spirit Box to begin');
+lg('[ SYS ] Ready — tap Spirit Box to begin');// Universal Web Audio Controls Engine
+let audioCtx = null;
+let noiseSourceNode = null;
+let distortionNode = null;
+let reverbGainNode = null;
+
+function startWraithAudio() {
+    if (audioCtx) return; 
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Generate Pure, Custom Offline Frequency Noise (No AI, No Pre-Recorded Voice Files)
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const outputData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        outputData[i] = Math.random() * 2 - 1; 
+    }
+    
+    noiseSourceNode = audioCtx.createBufferSource();
+    noiseSourceNode.buffer = noiseBuffer;
+    noiseSourceNode.loop = true;
+
+    // Set up Real-Time Effects Units
+    distortionNode = audioCtx.createWaveShaperNode();
+    reverbGainNode = audioCtx.createGain();
+    
+    distortionNode.curve = calculateDistortionCurve(0);
+    distortionNode.oversample = '4x';
+    reverbGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+
+    // Secure Signal Chain Routing Configuration: Noise -> Crunch Curve -> Ambience Vol -> Output
+    noiseSourceNode.connect(distortionNode);
+    distortionNode.connect(reverbGainNode);
+    reverbGainNode.connect(audioCtx.destination);
+    
+    noiseSourceNode.start();
+    bindWraithSliders();
+}
+
+function calculateDistortionCurve(amount) {
+    const k = typeof amount === 'number' ? amount : 50;
+    const samples = 44100;
+    const curve = new Float32Array(samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < samples; ++i) {
+        const x = (i * 2) / samples - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+}
+
+function bindWraithSliders() {
+    // Dynamically hooks your UI sliders to the live audio context processor matrix
+    const reverbSlider = document.querySelector('[class*="reverb"]') || document.getElementById('reverb');
+    if (reverbSlider) {
+        reverbSlider.addEventListener('input', (e) => {
+            if (reverbGainNode) reverbGainNode.gain.setValueAtTime(e.target.value / 5, audioCtx.currentTime);
+        });
+    }
+
+    const distortSlider = document.querySelector('[class*="distort"]') || document.getElementById('distort');
+    if (distortSlider) {
+        distortSlider.addEventListener('input', (e) => {
+            if (distortionNode) distortionNode.curve = calculateDistortionCurve(e.target.value * 15);
+        });
+    }
+}
+
+// Hook into your interface's primary activation button
+document.addEventListener('DOMContentLoaded', () => {
+    const activateBtn = document.querySelector('button') || document.getElementById('activate-btn');
+    if (activateBtn) {
+        activateBtn.addEventListener('click', () => {
+            startWraithAudio();
+        });
+    }
+});
 </script>
 </body>
 </html>
