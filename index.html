@@ -1073,28 +1073,114 @@ function bindWraithSliders() {
     // Dynamically hooks your UI sliders to the live audio context processor matrix
     const reverbSlider = document.querySelector('[class*="reverb"]') || document.getElementById('reverb');
     if (reverbSlider) {
-        reverbSlider.addEventListener('input', (e) => {
-            if (reverbGainNode) reverbGainNode.gain.setValueAtTime(e.target.value / 5, audioCtx.currentTime);
-        });
+/* === WRAITH HYBRID DSP & OFFLINE PATCH === */
+(function() {
+  let ctx = null, dist = null, rev = null, wet = null, dry = null, isReady = false;
+  let offlineTmr = null, currentStreamEl = null;
+
+  function buildCurve(val) {
+    const k = val * 12, n = 44100, c = new Float32Array(n), deg = Math.PI / 180;
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      c[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return c;
+  }
+
+  function setupEffects() {
+    if (isReady) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    dist = ctx.createWaveShaper();
+    dist.oversample = '4x';
+
+    rev = ctx.createConvolver();
+    const len = ctx.sampleRate * 1.8, buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    }
+    rev.buffer = buf;
+
+    wet = ctx.createGain();
+    dry = ctx.createGain();
+
+    dist.connect(dry);
+    dist.connect(rev);
+    rev.connect(wet);
+    dry.connect(ctx.destination);
+    wet.connect(ctx.destination);
+
+    isReady = true;
+    syncSliders();
+  }
+
+  function syncSliders() {
+    if (!isReady) return;
+    const rEl = document.getElementById('voxReverbR');
+    const dEl = document.getElementById('voxDistR');
+    const rVal = rEl ? Number(rEl.value) / 10 : 0.3;
+    const dVal = dEl ? Number(dEl.value) : 2;
+
+    wet.gain.setTargetAtTime(rVal * 0.85, ctx.currentTime, 0.05);
+    dry.gain.setTargetAtTime(1 - (rVal * 0.3), ctx.currentTime, 0.05);
+    dist.curve = buildCurve(dVal);
+  }
+
+  function playOfflineBurst() {
+    if (!isReady) setupEffects();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const burstSlider = document.getElementById('phBurstR');
+    const durSec = 0.15 + ((burstSlider ? Number(burstSlider.value) : 4) * 0.03);
+    const frameCount = Math.floor(ctx.sampleRate * durSec);
+    const buffer = ctx.createBuffer(1, frameCount, ctx.sampleRate);
+    const channel = buffer.getChannelData(0);
+
+    const baseFreq = 140 + Math.random() * 220;
+    for (let i = 0; i < frameCount; i++) {
+      const t = i / ctx.sampleRate;
+      const env = Math.sin((i / frameCount) * Math.PI);
+      const formant = Math.sin(2 * Math.PI * baseFreq * t) * 0.5 + (Math.random() * 2 - 1) * 0.5;
+      channel[i] = formant * env * 0.45;
     }
 
-    const distortSlider = document.querySelector('[class*="distort"]') || document.getElementById('distort');
-    if (distortSlider) {
-        distortSlider.addEventListener('input', (e) => {
-            if (distortionNode) distortionNode.curve = calculateDistortionCurve(e.target.value * 15);
-        });
-    }
-}
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(dist);
+    src.start();
+  }
 
-// Hook into your interface's primary activation button
-document.addEventListener('DOMContentLoaded', () => {
-    const activateBtn = document.querySelector('button') || document.getElementById('activate-btn');
-    if (activateBtn) {
-        activateBtn.addEventListener('click', () => {
-            startWraithAudio();
-        });
+  window.addEventListener('DOMContentLoaded', () => {
+    const rSlider = document.getElementById('voxReverbR');
+    const dSlider = document.getElementById('voxDistR');
+    const mainBtn = document.getElementById('phBtn');
+    const statusTxt = document.getElementById('phStatus');
+
+    if (rSlider) rSlider.addEventListener('input', syncSliders);
+    if (dSlider) dSlider.addEventListener('input', syncSliders);
+
+    if (mainBtn) {
+      mainBtn.addEventListener('click', () => {
+        setupEffects();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+
+        setTimeout(() => {
+          const active = mainBtn.classList.contains('on');
+          if (active) {
+            if (!navigator.onLine && statusTxt) {
+              statusTxt.textContent = 'Offline Frequency Mode Active...';
+            }
+            offlineTmr = setInterval(() => {
+              if (!navigator.onLine) playOfflineBurst();
+            }, 3500);
+          } else {
+            clearInterval(offlineTmr);
+          }
+        }, 150);
+      });
     }
-});
+  });
+})();
 </script>
 </body>
 </html>
