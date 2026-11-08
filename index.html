@@ -240,6 +240,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <canvas id="phonC" width="400" height="160"></canvas>
     <div id="phStatus">Awaiting signal...</div>
   </div>
+  <!-- WRAITH VOICE BANK SELECTOR -->
+<div class="slbl" style="margin-top:4px">Voice Bank (Select Before Session)</div>
+<div class="fg" id="voiceBankBtns" style="grid-template-columns:repeat(4,1fr);margin-bottom:6px">
+  <button type="button" class="fb on" data-bank="radio">Radio</button>
+  <button type="button" class="fb" data-bank="man">Man</button>
+  <button type="button" class="fb" data-bank="woman">Woman</button>
+  <button type="button" class="fb" data-bank="child">Child</button>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:12px">
+  <label for="customVoiceFile" class="fb" style="flex:1;padding:8px;border-color:rgba(0,255,136,0.3);color:#00ff88;cursor:pointer">
+    + UPLOAD CUSTOM VOICE
+  </label>
+  <input type="file" id="customVoiceFile" accept="audio/*" style="display:none">
+  <button type="button" class="fb" id="useCustomBankBtn" data-bank="custom" style="display:none;flex:1">
+    Custom: Saved
+  </button>
+</div>
+
 
 
 
