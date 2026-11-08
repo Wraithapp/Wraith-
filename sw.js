@@ -1,4 +1,4 @@
-const CACHE = 'wraith-v2';
+const CACHE = 'wraith-v4';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/Wraith-/', '/Wraith-/index.html', '/Wraith-/manifest.json'])));
   self.skipWaiting();
